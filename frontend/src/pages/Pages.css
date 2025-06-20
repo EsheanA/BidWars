@@ -1,0 +1,50 @@
+
+
+.Home{
+    /* background-color: aqua; */
+    border: 2px solid white;
+
+    height: 100%;
+    width:100%;
+
+    /* flex: 1; */
+    
+}
+.Nav{
+    /* padding: 10px; */
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.5);
+}
+
+.Body{
+    display: flex;
+    border: 2px solid white;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+    /* width:50vh; */
+    /* margin-top: 100px; */
+}
+.GamePortal{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: grey;
+    border: 2px solid white;
+    border-radius: 30px;
+    width: 30%;
+    height: 50%;
+}
+.GamePortal > *{
+     margin:10px;
+}
+.BattleButton{
+    background-color: black;
+    border: 2px solid white;
+    padding: 10px;
+    border-radius: 5px;
+}
+.BattleButton:hover{
+    background-color: navy;
+    transition: 0.25s all;
+}
