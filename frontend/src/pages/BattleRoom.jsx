@@ -1,6 +1,7 @@
 import Avatar from '../components/Avatar.jsx';
 import Spotlight from '../components/Spotlight.jsx';
 import { useState, useEffect } from 'react'
+import {io} from 'socket.io-client';
 
 const data = [
     {
@@ -16,9 +17,19 @@ const data = [
 ]
 function BattleRoom(){
     
-    useEffect(()=>{
+    // useEffect(()=>{
         
-    }, [])
+    // }, [])
+    // useEffect(() => {
+    //     socket.current = io("http://localhost:3000", { 
+    //         autoConnect: false,
+    //         query: {
+    //             userid: 123,
+    //             username: "Eshean"
+    //         }
+
+    //     });
+        
 
     const [numUsers, setNumUsers] = useState(3);
     const [itemForBid, setItemForBid] = useState(data[1])
