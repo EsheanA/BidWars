@@ -3,13 +3,16 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
-const RoomGroup = require('./RoomGroup');
+const RoomGroup = require('./RoomRelated/RoomGroup');
 const cors = require('cors')
 app.use(cors())
 
 
 const rooms = new RoomGroup();
 
+app.get('/', (req, res) => {
+    res.status(200).send('Server is up');
+  });
 
 const io = new Server(server, {
     cors: {
@@ -20,16 +23,20 @@ const io = new Server(server, {
 });
 
 io.on("connection", async (socket) => {
-    const {id, room} = await room_group.joinRoom();
+    const {userid, username} = socket.handshake.query;
+    const {id, room} = await rooms.joinRoom();
+    const user = {
+        id: userid,
+        username
+    }
     socket.join(id);
+    room.join(user)
     console.log(id)
-    // io.to(socket.id).emit('previous messages', room.messages)
-    // socket.on("chat message", (msg) => {
-    //     room.messages.push(msg)
-    //     io.to(id).emit('receive message', msg);
-    // });
+    io.to(id).emit('user list', {userlist: room.users})
+
     socket.on("disconnect", () => {
-        room_group.leaveRoom(id);
+        rooms.leaveRoom(userid, id);
+        io.to(id).emit('user list', {userlist: room.users})
     });
 });
 

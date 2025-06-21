@@ -5,12 +5,16 @@ import './App.css';
 import Avatar from './components/Avatar.jsx';
 import BattleRoom from './pages/BattleRoom.jsx'
 import Home from './pages/Home.jsx'
+import { Routes, Route } from 'react-router-dom';
 function App() {
   return (
     <>
       <div className = "App">
-        {/* <BattleRoom /> */}
-        <Home/>
+        <Routes>
+          <Route path = "/" element = {<Home />} default/>
+          <Route path = "/BattleRoom" element = {<BattleRoom />} />
+        </Routes>
+
       </div>
     </>
   )

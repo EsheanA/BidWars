@@ -1,8 +1,10 @@
 import Avatar from '../components/Avatar.jsx';
 import Spotlight from '../components/Spotlight.jsx';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef} from 'react'
 import {io} from 'socket.io-client';
-
+import {AppContext} from '../AppContext/context.jsx'
+import {useContext} from 'react';
+import { v4 as uuidv4 } from 'uuid';
 const data = [
     {
         name: "car.png",
@@ -16,34 +18,31 @@ const data = [
     }
 ]
 function BattleRoom(){
-    
-    // useEffect(()=>{
-        
-    // }, [])
-    // useEffect(() => {
-    //     socket.current = io("http://localhost:3000", { 
-    //         autoConnect: false,
-    //         query: {
-    //             userid: 123,
-    //             username: "Eshean"
-    //         }
+        const socket = useRef(null);
+        const [username, setUsername] = useContext(AppContext)
 
-    //     });
-        
+        // const [numUsers, setNumUsers] = useState(0);
+        const [itemForBid, setItemForBid] = useState(data[1])
+        const [users, setUsers] = useState([])
 
-    const [numUsers, setNumUsers] = useState(3);
-    const [itemForBid, setItemForBid] = useState(data[1])
-    const [users, setUsers] = useState(
-        [
-            {name: "Eshean"},
-            {name: "Josh"},
-            {name: "James"},
-            {name: "Jill"}
-        ]
-    )
-    const renderUsers = users.map((user) => (
-        <Avatar name = {user.name}/>
-    ))
+    useEffect(() => {
+        console.log(users)
+        socket.current = io("http://localhost:3000", { 
+            autoConnect: false,
+            query: {
+                userid: uuidv4(),
+                username: username
+            }
+        })
+        socket.current.connect()
+        socket.current.on("user list", (data) => setUsers(data.userlist))
+
+    }, []);
+    const renderUsers = users?.map((user) => {
+        return(
+            <Avatar name = {user.username} self = {true}/>
+        )
+    })
     return(
         <>
             {/* <div><img src = "/images/spotlight.jpg" height = "600" width = "1000"/></div> */}
