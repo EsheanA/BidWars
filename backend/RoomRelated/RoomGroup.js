@@ -4,6 +4,7 @@ const Room = require("./Room");
 const ROOM_MAX_CAPACITY = 4;
 class RoomGroup{
     constructor(){
+        this.rejoinRooms = new Map()
         this.rooms = [];
         this.privateRooms = new Map();
     }
@@ -14,6 +15,7 @@ class RoomGroup{
     //     let room_code = "ABC";
     //     this.privateRooms.set(room_code, newRoom);
     // }
+
     joinCode(user,str){
         return new Promise((resolve) =>{
             let foundRoom = this.privatesRooms.get(str);
@@ -23,6 +25,7 @@ class RoomGroup{
             }
         })
     }
+    
     joinRoom(){
         return new Promise((resolve) =>{
             for(let room of this.rooms){
@@ -32,6 +35,7 @@ class RoomGroup{
             }
             let newRoom = new Room();
             this.rooms.push(newRoom);
+            this.rejoinRooms.set(newRoom.id, newRoom);
             return resolve({id: newRoom.id, room: newRoom})
         })
     }

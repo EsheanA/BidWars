@@ -106,3 +106,29 @@
     background-color: navy;
     transition: 0.25s all;
 }
+
+.AccountCreation{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: grey;
+  border: 2px solid white;
+  border-radius: 30px;
+  width: 30%;
+  height: 50%;
+}
+.AccountCreation > *{
+  margin:10px;
+}
+.AccountCreation > .createAccount{
+  background-color: #272727;
+  border: 2px solid white;
+  padding: 10px;
+  border-radius: 5px;
+}
+.AccountCreation > .createAccount:hover{
+  background-color: navy;
+  transition: 0.25s all;
+}
+

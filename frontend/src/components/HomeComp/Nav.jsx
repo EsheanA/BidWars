@@ -1,8 +1,9 @@
-
-
-
+import {AppContext} from '../../AppContext/context.jsx';
+import {useContext} from 'react';
 
 function Nav() {
+
+    const [user, setUser] = useContext(AppContext)
     return (
       <>
        <div className="navbar bg-orange-900 shadow-sm Nav">
@@ -23,6 +24,7 @@ function Nav() {
                 <div className="navbar-center">
                     {/* <a className="btn btn-ghost text-xl">BidWars</a> */}
                     <img src = "/images/logo.png" height = "200px" width = "200px"/>
+                    
                 </div>
                 <div className="navbar-end">
                     {/* <button className="btn btn-ghost btn-circle">
@@ -35,11 +37,12 @@ function Nav() {
                         </div>
                     </button> */}
        
-                    <div className="avatar">
+                    {/* <div className="avatar">
                         <div className="w-14 rounded">
                             <img src="https://img.daisyui.com/images/profile/demo/batperson@192.webp" />
                         </div>
-                    </div>
+                    </div> */}
+                    <h3>{user ? user.username : "no user"}</h3>
                 </div>
             </div>
       </>

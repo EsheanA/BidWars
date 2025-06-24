@@ -19,7 +19,7 @@ const data = [
 ]
 function BattleRoom(){
         const socket = useRef(null);
-        const [username, setUsername] = useContext(AppContext)
+        const [user, setUser] = useContext(AppContext)
 
         // const [numUsers, setNumUsers] = useState(0);
         const [itemForBid, setItemForBid] = useState(data[1])
@@ -29,18 +29,20 @@ function BattleRoom(){
         console.log(users)
         socket.current = io("http://localhost:3000", { 
             autoConnect: false,
-            query: {
-                userid: uuidv4(),
-                username: username
+            auth: {
+                accessToken: localStorage.getItem("accesstoken")
             }
         })
         socket.current.connect()
+        socket.current.on("connect_error", (err) => {
+            console.error("Connection failed:", err.message); 
+        });
         socket.current.on("user list", (data) => setUsers(data.userlist))
-
     }, []);
-    const renderUsers = users?.map((user) => {
+
+    const renderUsers = users?.map((u) => {
         return(
-            <Avatar name = {user.username} self = {true}/>
+            <Avatar name = {u.username} self = {u.username === user.username ? true: false}/>
         )
     })
     return(
