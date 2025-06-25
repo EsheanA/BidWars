@@ -68,17 +68,25 @@ const io = new Server(server, {
 io.use((socket, next) => {
   const {roomToken} = socket.handshake.auth;
   if(roomToken){
-    next()
+    jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET, (err, session) => {
+      if (err) {
+        next(new Error("Authentication error"))
+      }
+      socket.session = session;
+      next();
+    });
   }else{
-    try{
-      const {accessToken} = socket.handshake.auth;
-      const user = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    const {accessToken} = socket.handshake.auth;
+    // const user = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        next(new Error("Authentication error"))
+      }
+      console.log(user)
       socket.user = user;
-      next()
-    }catch(error){
-      // console.log("error")
-      next(new Error("Authentication error"))
-    }
+      next();
+    });
+
   }
 });
 
@@ -87,10 +95,9 @@ io.on("connection", async (socket) => {
     let userID;
     let roomID;
     let currRoom;
-    const {roomToken} = socket.handshake.auth
-    
-    if(roomToken){
-      const {username, userid, roomid} = jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET)
+    // const {roomToken} = socket.handshake.auth
+    if(socket.session){
+      const {username, userid, roomid} = socket.session
       if(roomid){
         const user = {
           userid,
