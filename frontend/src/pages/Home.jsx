@@ -1,6 +1,6 @@
 import Nav from '../components/HomeComp/Nav.jsx'
 import './Pages.css';
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import {AppContext} from '../AppContext/context.jsx';
 import {useContext} from 'react';
 import {useNavigate} from "react-router-dom"
@@ -10,6 +10,12 @@ function Home() {
     const navigate = useNavigate();
     const [user, setUser] = useContext(AppContext)
     const [username, setUsername] = useState("")
+
+
+    useEffect(() => { 
+        if(localStorage.getItem("roomtoken"))
+            localStorage.removeItem("roomtoken")
+    },[])
     const handleSubmit = (e)=>{
         e.preventDefault()
         if(user){
@@ -22,6 +28,7 @@ function Home() {
                 });
         }
     }
+    
 
     const createAccount = async(e)=>{
         e.preventDefault()

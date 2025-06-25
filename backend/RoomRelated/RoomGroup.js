@@ -17,24 +17,32 @@ class RoomGroup{
     // }
 
     joinPrivateCode(user,str){
-        return new Promise((resolve) =>{
+        return new Promise((resolve, reject) =>{
             let foundRoom = this.privatesRooms.get(str);
             if(foundRoom && foundRoom.users.length < (ROOM_MAX_CAPACITY+1)){
                 foundRoom.join(user);
                 return(resolve({id: foundRoom.id, room: foundRoom}))
             }
+            else{
+                return reject(new Error("room not found"))
+            }
         })
     }
     joinPublicCode(user,str){
-        return new Promise((resolve) =>{
+        return new Promise((resolve, reject) =>{
             let foundRoom = this.rejoinRooms.get(str);
             if(foundRoom && foundRoom.users.length < (ROOM_MAX_CAPACITY)){
                 foundRoom.join(user);
                 return(resolve({id: foundRoom.id, room: foundRoom}))
             }
+            else{
+                return reject(new Error("room not found"))
+            }
         })
     }
-    
+    roomExist(roomid){
+        return(this.rejoinRooms.get(roomid) ? true : false)
+    }
     joinRoom(){
         return new Promise((resolve) =>{
             for(let room of this.rooms){
@@ -49,11 +57,11 @@ class RoomGroup{
         })
     }
     leaveRoom(userID, roomId){
-        console.log("left")
         this.rooms = this.rooms.filter((room) => {
           if (room.id === roomId) {
             room.kickUser(userID)
             if(room.users.length == 0){
+                this.rejoinRooms.delete(roomId)
                 return false
             }
           }

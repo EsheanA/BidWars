@@ -35,10 +35,10 @@ function BattleRoom(){
             }
         })
         socket.current.connect()
-        // socket.current.on("connect_error", (err) => {
-        //     console.error("Connection failed:", err.message); 
-        //     navigate("/")
-        // });
+        socket.current.on("connect_error", (err) => {
+            console.error("Connection failed:", err.message); 
+            navigate("/")
+        });
         socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
         socket.current.on("user data", data => setUser({username: data.username, userid: data.id}))
         // socket.current.on("room token", data => console.log(data.roomToken))
