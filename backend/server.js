@@ -8,7 +8,6 @@ const cors = require('cors')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
 const { v4: uuidv4 } = require("uuid");
-// const { ref } = require('process');
 
 app.use(cors())
 app.use(express.json())
@@ -23,22 +22,15 @@ const generateAccessToken = (user) => {
   });
 };
 
+const generateRoomAccessToken = (user, roomid) =>{
+  return jwt.sign({ userid: user.userid, username: user.username, roomid}, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: "5m",
+  });
+}
 const generateRefreshToken = (user) => {
   return jwt.sign({ id: user.id}, process.env.REFRESH_TOKEN_SECRET);
 };
 
-// function authenticateToken(req, res, next) {
-//   const authHeader = req.headers['authorization']
-//   const token = authHeader && authHeader.split(' ')[1]
-//   if (token == null) return res.sendStatus(401)
-
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-//     console.log(err)
-//     if (err) return res.sendStatus(403)
-//     req.user = user
-//     next()
-//   })
-// }
 
 
 
@@ -66,52 +58,79 @@ const io = new Server(server, {
       methods: ['GET', 'POST'],
       credentials: true
     }
+    // connectionStateRecovery: {
+    //   maxDisconnectionDuration: 2 * 60 * 1000,
+    //   skipMiddlewares: true,
+    // }
 });
 
-function authenticateToken(token) {
-  // const authHeader = req.headers['authorization']
-  // const token = authHeader && authHeader.split(' ')[1]
-  if (token == null) return res.sendStatus(401)
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    console.log(err)
-    if (err) return res.sendStatus(403)
-    req.user = user
-    next()
-  })
-}
 
 io.use((socket, next) => {
-  try{
-    
-    const {accessToken} = socket.handshake.auth;
-    const user = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-    socket.user = user;
-    console.log(socket.user)
+  const {roomToken} = socket.handshake.auth;
+  if(roomToken){
     next()
-  }catch(error){
-    console.log("error")
-    next(new Error("Authentication error"))
+  }else{
+    try{
+      const {accessToken} = socket.handshake.auth;
+      const user = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+      socket.user = user;
+      next()
+    }catch(error){
+      // console.log("error")
+      next(new Error("Authentication error"))
+    }
   }
 });
 
 
 io.on("connection", async (socket) => {
-    // const {userid, username} = socket.handshake.auth;
-    const {userid, username} = socket.user
-    const {id, room} = await rooms.joinRoom();
-    const user = {
-        id: userid,
-        username
+    let userID;
+    let roomID;
+    let currRoom;
+    const {roomToken} = socket.handshake.auth
+    
+    if(roomToken){
+      const {username, userid, roomid} = jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET)
+      if(roomid){
+        const user = {
+          userid,
+          username
+        }
+        userID = user.userid
+        roomID = roomid
+        const {id, room} = await rooms.joinPublicCode(user, roomid);
+        socket.join(id);
+        currRoom = room;
+        io.to(socket.id).emit('user data', {id: user.userid, username: user.username})
+        setTimeout(() => {
+          console.log(room.users)
+          io.to(id).emit('user list', {userlist: room.users})
+        }, "1000");
+        
+      }
     }
-    socket.join(id);
-    room.join(user)
-    console.log(id)
-    io.to(id).emit('user list', {userlist: room.users})
-
+    else{
+      const {userid, username} = socket.user
+      const {id, room} = await rooms.joinRoom();
+      const user = {
+          userid,
+          username
+      }
+      userID = user.userid
+      roomID = id
+      currRoom = room;
+      socket.join(id);
+      room.join(user)
+      const roomToken = generateRoomAccessToken(user, id)
+      io.to(socket.id).emit("room token", {roomToken});
+      io.to(id).emit('user list', {userlist: room.users})
+    }
     socket.on("disconnect", () => {
-        rooms.leaveRoom(userid, id);
-        io.to(id).emit('user list', {userlist: room.users})
+      rooms.leaveRoom(userID, roomID);
+      console.log(currRoom.users)
+      io.to(roomID).emit('user list', {userlist: currRoom.users})
     });
+    
 });
 
 server.listen(3000, () => {

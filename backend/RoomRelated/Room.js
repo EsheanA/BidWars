@@ -25,7 +25,7 @@ class Room{
         this.minBid = bid;
     }
     kickUser(userId){
-        this.users = this.users.filter(kickUser => kickUser.id != userId)
+        this.users = this.users.filter(kickuser => kickuser.userid != userId)
     }
 }
 module.exports = Room;

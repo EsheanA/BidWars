@@ -4,7 +4,7 @@ import { useState, useEffect, useRef} from 'react'
 import {io} from 'socket.io-client';
 import {AppContext} from '../AppContext/context.jsx'
 import {useContext} from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import {useNavigate} from "react-router-dom"
 const data = [
     {
         name: "car.png",
@@ -18,26 +18,34 @@ const data = [
     }
 ]
 function BattleRoom(){
+        const navigate = useNavigate();
         const socket = useRef(null);
         const [user, setUser] = useContext(AppContext)
-
-        // const [numUsers, setNumUsers] = useState(0);
         const [itemForBid, setItemForBid] = useState(data[1])
         const [users, setUsers] = useState([])
 
     useEffect(() => {
-        console.log(users)
+        let roomToken = localStorage.getItem("roomtoken");
+        let accessToken = localStorage.getItem("accesstoken");
         socket.current = io("http://localhost:3000", { 
             autoConnect: false,
             auth: {
-                accessToken: localStorage.getItem("accesstoken")
+                roomToken,
+                accessToken
             }
         })
         socket.current.connect()
-        socket.current.on("connect_error", (err) => {
-            console.error("Connection failed:", err.message); 
-        });
-        socket.current.on("user list", (data) => setUsers(data.userlist))
+        // socket.current.on("connect_error", (err) => {
+        //     console.error("Connection failed:", err.message); 
+        //     navigate("/")
+        // });
+        socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
+        socket.current.on("user data", data => setUser({username: data.username, userid: data.id}))
+        // socket.current.on("room token", data => console.log(data.roomToken))
+        socket.current.on("user list", (data) => {
+            console.log(data.userlist)
+            setUsers(data.userlist)}
+        )
     }, []);
 
     const renderUsers = users?.map((u) => {
@@ -47,7 +55,6 @@ function BattleRoom(){
     })
     return(
         <>
-            {/* <div><img src = "/images/spotlight.jpg" height = "600" width = "1000"/></div> */}
             <Spotlight item = {itemForBid.name} imgWidth = {itemForBid.width} imgHeight = {itemForBid.height}/>
             <div className = "AvatarSpread">
                 {renderUsers}

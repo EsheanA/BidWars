@@ -16,10 +16,19 @@ class RoomGroup{
     //     this.privateRooms.set(room_code, newRoom);
     // }
 
-    joinCode(user,str){
+    joinPrivateCode(user,str){
         return new Promise((resolve) =>{
             let foundRoom = this.privatesRooms.get(str);
             if(foundRoom && foundRoom.users.length < (ROOM_MAX_CAPACITY+1)){
+                foundRoom.join(user);
+                return(resolve({id: foundRoom.id, room: foundRoom}))
+            }
+        })
+    }
+    joinPublicCode(user,str){
+        return new Promise((resolve) =>{
+            let foundRoom = this.rejoinRooms.get(str);
+            if(foundRoom && foundRoom.users.length < (ROOM_MAX_CAPACITY)){
                 foundRoom.join(user);
                 return(resolve({id: foundRoom.id, room: foundRoom}))
             }
