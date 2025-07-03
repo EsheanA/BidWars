@@ -13,7 +13,6 @@ app.use(cors())
 app.use(express.json())
 
 const rooms = new RoomGroup();
-const userdb = [];
 const refreshtokens = [];
 
 const generateAccessToken = (user) => {
@@ -45,7 +44,6 @@ app.post('/createAccount', (req, res) => {
     username
   }
   const accessToken = generateAccessToken(newUser)
-  userdb.push(newUser);
   res.json({ userid: newUser.userid, username: newUser.username, accessToken })
 });
 
@@ -55,11 +53,11 @@ const io = new Server(server, {
     origin: "*",
     methods: ['GET', 'POST'],
     credentials: true
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    skipMiddlewares: true,
   }
-  // connectionStateRecovery: {
-  //   maxDisconnectionDuration: 2 * 60 * 1000,
-  //   skipMiddlewares: true,
-  // }
 });
 
 
@@ -74,17 +72,16 @@ io.use((socket, next) => {
       next();
     });
   } else {
-    const { accessToken } = socket.handshake.auth;
-    jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-      if (err) {
-        next(new Error("Authentication error"))
-      }
-      console.log(user)
-      socket.user = user;
-      next();
-    });
-
-  }
+      const { accessToken } = socket.handshake.auth;
+      jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        if (err) {
+          next(new Error("Authentication error"))
+        }
+        console.log(user)
+        socket.user = user;
+        next();
+      });
+    }
 });
 
 
@@ -92,7 +89,8 @@ io.on("connection", async (socket) => {
   let userID;
   let roomID;
   let currRoom;
-  // const {roomToken} = socket.handshake.auth
+
+  const {roomToken} = socket.handshake.auth
   if (socket.session) {
     const { username, userid, roomid } = socket.session
     if (roomid) {
@@ -104,7 +102,6 @@ io.on("connection", async (socket) => {
       roomID = roomid
       await rooms.joinPublicCode(user, roomid)
         .then(({ id, room }) => {
-
           socket.join(id);
           currRoom = room;
           io.to(socket.id).emit('user data', { id: user.userid, username: user.username })
@@ -121,7 +118,6 @@ io.on("connection", async (socket) => {
   }
   else {
     const { userid, username } = socket.user
-    // const { id, room } = await rooms.joinRoom();
     const user = {
       userid,
       username
@@ -136,17 +132,21 @@ io.on("connection", async (socket) => {
 
         const roomToken = generateRoomAccessToken(user, id)
         io.to(socket.id).emit("room token", { roomToken });
-        io.to(id).emit('user list', { userlist: room.users })
+        // io.to(id).emit('user list', { userlist: room.users })
         setTimeout(() => {
           console.log(room.users)
           io.to(id).emit('user list', { userlist: room.users })
         }, "1000");
+        if(room.users.length == 1)
+          handleGameLogic(room)
       })
       .catch(err => {
         console.error("Join failed:", err.message);
         socket.emit("error message", "Room not found or full");
       });
   }
+
+
   socket.on("disconnect", () => {
     console.log("left")
     rooms.leaveRoom(userID, roomID);
@@ -156,7 +156,44 @@ io.on("connection", async (socket) => {
     }
   });
 
+
 });
+
+async function handleGameLogic(room){
+  if(!room.private){
+    const sockets = await io.in(room.id).fetchSockets()
+    let item_index = -1;
+    io.to(room.id).emit("begin_game", {balance: room.maxBalance})
+    console.log("game begin")
+    let round = setInterval(() => {
+      item_index+=1
+      if(item_index >= room.items_for_bid.length)
+        clearInterval(round)
+      else{
+        let item = room.items_for_bid[item_index]
+        // console.log(item)
+        itemBid(room, item, sockets)
+        // console.log(room.id)
+      }
+      
+    }, 10*1000);
+  }
+}
+
+function itemBid(room, item, sockets){
+  // const highestbidder = {user: null, bid: item.starting_bid}
+  console.log(item)
+  io.to(room.id).emit("setItem", {item})
+  // for(let i = 0; i<sockets.length; i++){
+  //   sockets[i].on("bid", ({user, balance, bid})=>{
+  //     if(!(bid > balance)){
+  //       highestbidder.user = user
+  //       highestbidder.bid = bid
+  //       io.to(room.id).emit("current bid", {highestbidder, bidmessage: `I bid $${bid}, skibidi`});
+  //     }
+  //   })
+  // }
+}
 
 server.listen(3000, () => {
   console.log('listening on *:3000');

@@ -16,7 +16,7 @@
   } */
 
   .itemForBid{
-    margin-top: -30px;
+    margin-top: -27px;
   }
   
   .AvatarSpread{
@@ -53,15 +53,18 @@
     position: absolute;
     top: 60%;
   }
-  
+  .Spotlight > .Spotlight-img{
+    height: 60vh;
+    width: 90vw;
+  }
   
   
   
  /*HOMEPAGE CSS*/
 .Home{
     /* background-color: aqua; */
-    border: 2px solid white;
-
+    /* border: 2px solid white; */
+    background-color: #fefae0;
     height: 100%;
     width:100%;
 
@@ -70,28 +73,45 @@
 }
 .Nav{
     /* padding: 10px; */
-    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.5);
+    /* box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px; */
+    /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.5); */
+    box-shadow: rgba(0, 0, 0, 0.45) 0px 25px 20px -20px;
+
 }
 
 .Body{
     display: flex;
-    border: 2px solid white;
+    /* border: 2px solid white; */
     justify-content: center;
     align-items: center;
-    height: 50vh;
+    height: 70vh;
+    /* background-color: red; */
     /* width:50vh; */
     /* margin-top: 100px; */
 }
+
 .GamePortal{
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: grey;
-    border: 2px solid white;
+    background-color: #fefae0;
+    /* border: 5px solid black; */
     border-radius: 30px;
     width: 30%;
     height: 50%;
+    box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
+
+    /* box-shadow: rgba(17, 17, 26, 0.1) 0px 1px 0px, rgba(17, 17, 26, 0.1) 0px 8px 24px, rgba(17, 17, 26, 0.1) 0px 16px 48px; */
+    transition: all 1s;
+}
+.GamePortal:hover{
+  /* background-color: red; */
+  height: 60%;
+  width: 35%;
+  border:none;
+  transition: all 0.5s;
+  box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
 }
 .GamePortal > *{
      margin:10px;
@@ -130,5 +150,14 @@
 .AccountCreation > .createAccount:hover{
   background-color: navy;
   transition: 0.25s all;
+}
+
+.Footer{
+  box-shadow: rgba(0, 0, 0, 0.56) 0px 22px 70px 4px;
+  background-color: #61A0AF;
+  height: 12vh;
+  width: 100vw;
+  margin: 0px;
+ 
 }
 
