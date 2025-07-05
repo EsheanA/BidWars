@@ -21,6 +21,7 @@ function Home() {
             localStorage.removeItem("accesstoken")
             setUser(null)
         }
+        localStorage.clear();
     }, [])
 
     const handleSubmit = (e) => {

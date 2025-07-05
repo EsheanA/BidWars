@@ -16,7 +16,7 @@ const rooms = new RoomGroup();
 const refreshtokens = [];
 
 const generateAccessToken = (user) => {
-  return jwt.sign({ userid: user.userid, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
+  return jwt.sign({ userid: user.userid, username: user.username}, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: "5m",
   });
 };
@@ -92,7 +92,7 @@ io.on("connection", async (socket) => {
 
   const {roomToken} = socket.handshake.auth
   if (socket.session) {
-    const { username, userid, roomid } = socket.session
+    const { username, userid, roomid} = socket.session
     if (roomid) {
       const user = {
         userid,
@@ -132,12 +132,11 @@ io.on("connection", async (socket) => {
 
         const roomToken = generateRoomAccessToken(user, id)
         io.to(socket.id).emit("room token", { roomToken });
-        // io.to(id).emit('user list', { userlist: room.users })
         setTimeout(() => {
           console.log(room.users)
           io.to(id).emit('user list', { userlist: room.users })
         }, "1000");
-        if(room.users.length == 1)
+        if(room.users.length == 2)
           handleGameLogic(room)
       })
       .catch(err => {
@@ -161,9 +160,12 @@ io.on("connection", async (socket) => {
 
 async function handleGameLogic(room){
   if(!room.private){
+    const handler = ({ user, balance, bid }) => {
+      bidHandle(user, balance, bid, room);
+    };
     const sockets = await io.in(room.id).fetchSockets()
     let item_index = -1;
-    io.to(room.id).emit("begin_game", {balance: room.maxBalance})
+    io.to(room.id).emit("begin_game", {balance: room.maxBalance, bidOptions: room.bidOptions})
     console.log("game begin")
     let round = setInterval(() => {
       item_index+=1
@@ -171,28 +173,30 @@ async function handleGameLogic(room){
         clearInterval(round)
       else{
         let item = room.items_for_bid[item_index]
-        // console.log(item)
-        itemBid(room, item, sockets)
-        // console.log(room.id)
+        room.highestbidder = {user: null, bid: item.starting_bid}
+        itemBid(room, item, sockets, handler)
       }
       
     }, 10*1000);
   }
 }
 
-function itemBid(room, item, sockets){
-  // const highestbidder = {user: null, bid: item.starting_bid}
-  console.log(item)
+function itemBid(room, item, sockets, handler){
   io.to(room.id).emit("setItem", {item})
-  // for(let i = 0; i<sockets.length; i++){
-  //   sockets[i].on("bid", ({user, balance, bid})=>{
-  //     if(!(bid > balance)){
-  //       highestbidder.user = user
-  //       highestbidder.bid = bid
-  //       io.to(room.id).emit("current bid", {highestbidder, bidmessage: `I bid $${bid}, skibidi`});
-  //     }
-  //   })
-  // }
+  for(let i = 0; i<sockets.length; i++){
+    sockets[i].off("bid",handler)
+    sockets[i].on("bid", handler)
+  }
+}
+
+
+
+const bidHandle = (user, balance, bid, room) => {
+  if(!(bid > balance)){
+    room.highestbidder.user = user;
+    room.highestbidder.bid = bid;
+    io.to(room.id).emit("current bid", {highestBidder: room.highestbidder, bidmessage: `I bid $${bid}, skibidi`});
+  }
 }
 
 server.listen(3000, () => {

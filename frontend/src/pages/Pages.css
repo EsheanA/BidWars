@@ -3,8 +3,10 @@
     position: relative;
     margin-top: -20px;
     background-color: black;
-    width: 900px;
-    height: 500px;
+    /* width: 900px;
+    height: 500px; */
+    height: 50vh;
+    width: 70vw;
     padding: 50px;
     padding: 10px;
     display: flex;
@@ -14,6 +16,11 @@
   /* .Spotlight:hover{
     display: none;
   } */
+
+  .Spotlight > .Spotlight-img{
+    height: 60vh;
+    width: 90vw;
+  }
 
   .itemForBid{
     margin-top: -27px;
@@ -28,17 +35,68 @@
   
   .Avatar{
     background-color: #272727;
+    border: 2px solid green;
     position: relative;
     flex: 20%;
     padding: 5px;
     border-radius: 50px;
     align-items: center;
     justify-content: center;
-    margin: 10px;
+    margin: 50px;
+    transition: 0.5s all;
   }
   .Avatar:hover{
     background-color: white;
+    /* background-color: gold; */
+    
     transition: 0.5s all;
+  }
+  .bidButtons{
+    position: absolute;
+    bottom: -20%;
+    right: 21% ;
+    display: flex;
+    border: 2px solid gold;
+    /* border-radius: 10px; */
+    /* padding: 5px; */
+    /* flex-direction: column; */
+  }
+  .bidButton{
+    /* position: relative; */
+    font-size: large;
+    font-weight: bold;
+    color:black;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    transition: 0.5s all;
+    /* border-radius: 10px; */
+    /* border: 2px solid gold; */
+    background-color: #272727;
+    color: white;
+    padding: 10px;
+    padding: 1vh 2.5vw;
+    width: 4vw;
+    height: auto;
+    border-right: 2px solid gold;
+    
+  }
+  
+  .bidButton:hover{
+   
+    background-color: green;
+    color:gold;
+    transition: 0.2s all;
+  }
+  .main{
+    background-color: green;
+    width: 6vw;
+    border-right: none;
+  }
+  .main:hover{
+    background-color: darkgreen;
+    /* color:green; */
+    /* border: 2px solid green; */
   }
   
   .centered {
@@ -53,12 +111,50 @@
     position: absolute;
     top: 60%;
   }
-  .Spotlight > .Spotlight-img{
-    height: 60vh;
-    width: 90vw;
+  .highestBid{
+    position: absolute;
+    top: 90%;
+    font-size: large;
+    font-weight: bold;
   }
   
+  .Balance{
+    color:white;
+    font-size: large;
+    font-weight: bold;
+    position: absolute;
+    top: 10%;
+    left: 90%;
+  }
   
+  .Chatbubble{
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: -75%;
+    right: -50%;
+    /* opacity: 0;
+    transition: all 0.5s; */
+
+  }
+  /* .Chatbubble:hover{
+    opacity: 1;
+    transition: all 0.5s;
+  } */
+  .chatbubbleIMG{
+    height: 25vh;
+    width: auto;
+  }
+  .chatbubbleMessage{
+    position: absolute;
+    color: black;
+    font-size: large;
+    font-weight: bold;
+    height: 5vh;
+    width: 17vh;
+    top: 35%;
+  }
   
  /*HOMEPAGE CSS*/
 .Home{
@@ -104,12 +200,14 @@
 
     /* box-shadow: rgba(17, 17, 26, 0.1) 0px 1px 0px, rgba(17, 17, 26, 0.1) 0px 8px 24px, rgba(17, 17, 26, 0.1) 0px 16px 48px; */
     transition: all 1s;
+    border: 2px solid white;
+
 }
 .GamePortal:hover{
   /* background-color: red; */
   height: 60%;
   width: 35%;
-  border:none;
+  /* border:none; */
   transition: all 0.5s;
   box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
 }
@@ -137,6 +235,14 @@
   border-radius: 30px;
   width: 30%;
   height: 50%;
+  transition: all 0.5s;
+  box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
+}
+.AccountCreation:hover{
+  height: 60%;
+  width: 35%;
+  /* border:none; */
+  transition: all 0.5s;
 }
 .AccountCreation > *{
   margin:10px;

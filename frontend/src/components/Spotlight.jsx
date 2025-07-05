@@ -1,21 +1,26 @@
 
 import {useState, useEffect,useRef} from 'react'
 
-function Spotlight({item}) {
-    const [visible, setVisible] = useState(false)
+function Spotlight({item, highestBid}) {
+    const [visible, setVisible] = useState(true)
     const imgRef = useRef(null)
     const [isImage, setIsImage] = useState(false)
     useEffect(()=>{
-      for(let i = 0; i<= 10; i++){
+      if(item){
+        setVisible((false))
         setTimeout(() => {
-          setVisible((i%2==0 ? true : false))
-        }, i*100);
-      }
-      setTimeout(() => {
-        setVisible(true);
-      }, 11 * 100);
-      // setVisible(true)
-    }, [])
+          for(let i = 0; i<= 10; i++){
+            setTimeout(() => {
+              setVisible((i%2==0 ? true : false))
+            }, i*100);
+          }
+          setTimeout(() => {
+            setVisible(true);
+          }, 11 * 100);
+        }, 500);
+
+        }
+    }, [item])
 
     useEffect(()=>{
       const img = imgRef.current;
@@ -36,10 +41,10 @@ function Spotlight({item}) {
     return (
       <>
         <div className = "Spotlight" style={{ display: visible ? "flex" : "none" }}>
-            <img ref={imgRef} src = {"/items/" + item} style = {{display: "none"}}/>
+            <img ref={imgRef} src = {"/items/" + item?.url} style = {{display: "none"}}/>
             <img className = "Spotlight-img" src = "/images/spotlight.jpg"/>
-            {item ? <img className = "itemForBid"  src = {"/items/" + item} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/> : <span/>}
-
+            {item ? <img className = "itemForBid"  src = {"/items/" + item?.url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/> : <span/>}
+            {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>}
         </div>
       </>
     )

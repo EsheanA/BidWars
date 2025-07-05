@@ -6,6 +6,7 @@ class Room{
         this.admin = null;
         this.id = uuidv4()
         this.users = [];
+        this.highestbidder = null;
         this.items_for_bid = [
             // {
             //     name: "car.png"
@@ -22,9 +23,12 @@ class Room{
             // {
             //     name: "switch.png"
             // },
-            // {
-            //     name: "gold.png"
-            // },
+            {
+                url: "gold.png",
+                name:"gold",
+                starting_bid: 200,
+                value: 300
+            },
             // {
             //     name: "jordans.png"
             // },
@@ -32,14 +36,21 @@ class Room{
             //     name: "airpods.png"
             // },
             {
-                name: "mario-kart.png"
+                url: "mario-kart.png",
+                name : "mario_kart",
+                starting_bid: 50,
+                value : 100
             },
             {
-                name: "brokensword.png"
+                url: "brokensword.png",
+                name : "broken_sword",
+                starting_bid:15,
+                value : 35
             }
 
         ];
         this.maxBalance = 250;
+        this.bidOptions = [5, 10, 20];
         this.private = false;
         this.roomCode = "";
         // this.time = null;

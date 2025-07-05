@@ -25,10 +25,14 @@ function BattleRoom(){
         const [balance, setBalance] = useState(0)
         const [itemForBid, setItemForBid] = useState(null)
         const [users, setUsers] = useState([])
+        const [highestBid, setHighestBid] = useState(0)
         const [highestBidder, setHighestBidder] = useState(null)
-        const [gamestate, setGamestate] = useState({
-            in_progress: false,
-        })
+        const [gamestate, setGamestate] = useState(false)
+
+
+        // hardcoded
+        const [bidOptions, setBidOptions] = useState([])
+
     useEffect(() => {
         let roomToken = localStorage.getItem("roomtoken");
         let accessToken = localStorage.getItem("accesstoken");
@@ -40,6 +44,12 @@ function BattleRoom(){
             }
         })
         socket.current.connect()
+        if(localStorage.getItem("game") != null){
+            const game = JSON.parse(localStorage.getItem("game"));
+            setGamestate(true)
+            setBalance(game.balance)
+            setBidOptions(game.bidOptions)
+        }
         socket.current.on("connect_error", (err) => {
             console.error("Connection failed:", err.message); 
             navigate("/")
@@ -52,34 +62,61 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", data => {
-            console.log(data.item)
+            // console.log(data.item)
             setItemForBid(data.item)
+            setHighestBid(data.item.starting_bid)
+            setHighestBidder(null)
         })
-        // socket.current.on("begin_game", (data)=> {
-        //     if(data)
-        //         setBalance(data.balance)
-        //     socket.current.on("current_bid", data => {
-        //         if(data){
-        //             setHighestBidder({info: data.highestbidder, message: data.bidmessage})
-        //         }
-        //     })
-        // })
-
+        socket.current.on("current bid", data => {
+            if(data){
+                console.log(data.highestBidder)
+                setHighestBidder({user: data.highestBidder.user, message: data.bidmessage})
+                setHighestBid(data.highestBidder.bid)
+                
+            }
+        })
+        socket.current.on("begin_game", (data)=> {
+            setGamestate(true)
+            if(data){
+                setBalance(data.balance)
+                setBidOptions(data.bidOptions)
+                localStorage.setItem("game", JSON.stringify({
+                    balance: data.balance,
+                    bidOptions: data.bidOptions
+                }))
+            }
+        })
+        
         return() =>{
             socket.current.disconnect()
             console.log("Socket disconnected")
+            
         }
 
     }, []);
 
+    const makeBid = (val, player) =>{
+        console.log("pop")
+        if(itemForBid){
+            // console.log("user: ")
+            // console.log(player)
+            // console.log(highestBid+val)
+
+            socket.current.emit("bid", {user: player, balance, bid: highestBid+val})
+            // setHighestBid(val)
+            // setHighestBidder(player)
+        }
+    }
+
     const renderUsers = users?.map((u) => {
         return(
-            <Avatar name = {u.username} self = {u.userid === user.userid ? true: false}/>
+            <Avatar user = {u} highestBidder = {highestBidder} makeBid = {(val, user) => makeBid(val, user)} name = {u.username} self = {u.userid === user.userid ? true: false} bidOptions = {bidOptions}/>
         )
     })
     return(
         <>
-            <Spotlight item = {itemForBid?.name}/>
+            <div className = "Balance">Balance: ${balance}</div>
+            <Spotlight item = {itemForBid} highestBid = {highestBid}/>
             <div className = "AvatarSpread">
                 {renderUsers}
             </div>
