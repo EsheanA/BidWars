@@ -41,7 +41,8 @@ class RoomGroup{
         })
     }
     roomExist(roomid){
-        return(this.rejoinRooms.get(roomid) ? true : false)
+        const room = this.rejoinRooms.get(roomid);
+        return((room) ? !room.game_over : false)
     }
     joinRoom(){
         return new Promise((resolve) =>{

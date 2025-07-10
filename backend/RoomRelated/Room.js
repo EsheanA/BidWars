@@ -6,6 +6,7 @@ class Room{
         this.admin = null;
         this.id = uuidv4()
         this.users = [];
+        this.game_ovver = false;
         this.highestbidder = null;
         this.items_for_bid = [
             // {

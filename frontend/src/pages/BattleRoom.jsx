@@ -52,6 +52,9 @@ function BattleRoom(){
         }
         socket.current.on("connect_error", (err) => {
             console.error("Connection failed:", err.message); 
+        });
+        socket.current.on("disconnect", (reason) => {
+            console.log("Disconnected:", reason);
             navigate("/")
         });
         socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
@@ -62,7 +65,6 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", data => {
-            // console.log(data.item)
             setItemForBid(data.item)
             setHighestBid(data.item.starting_bid)
             setHighestBidder(null)
@@ -72,7 +74,6 @@ function BattleRoom(){
                 console.log(data.highestBidder)
                 setHighestBidder({user: data.highestBidder.user, message: data.bidmessage})
                 setHighestBid(data.highestBidder.bid)
-                
             }
         })
         socket.current.on("begin_game", (data)=> {
@@ -84,7 +85,17 @@ function BattleRoom(){
                     balance: data.balance,
                     bidOptions: data.bidOptions
                 }))
+
             }
+        })
+
+        socket.current.on("updated_balance", data =>{
+            if(data)
+                if(data.userid == user.userid){
+                    setBalance(data.balance)
+                    console.log(data.balance)
+                }
+            
         })
         
         return() =>{
