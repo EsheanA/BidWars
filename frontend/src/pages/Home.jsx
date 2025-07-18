@@ -13,29 +13,41 @@ function Home() {
 
 
     useEffect(() => {
-        console.clear();
+        // console.clear();
+
         if (localStorage.getItem("roomtoken")){
+            setUser(null)
             localStorage.removeItem("roomtoken")
         }
-        if(localStorage.getItem("accesstoken")){
-            localStorage.removeItem("accesstoken")
-            setUser(null)
-        }
+        // if(localStorage.getItem("accesstoken")){
+        //     localStorage.removeItem("accesstoken")
+                // setUser(null)
+        // }
+
+
         localStorage.clear();
     }, [])
 
     const handleSubmit = (e) => {
         e.preventDefault()
         if (user) {
-            fetch("http://localhost:3000", { method: "GET" })
+            fetch("http://localhost:3000", { 
+                method: "POST", 
+                credentials: 'include',  
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userid: user?.userid })})
                 .then(() => {
                     navigate("/BattleRoom");
+                    // console.log("success")
                 })
                 .catch((err) => {
                     console.warn("Server not reachable, skipping socket connection.");
                 });
         }
     }
+    // function logout = ()=>{
+
+    // }
 
 
     const createAccount = async (e) => {
@@ -45,6 +57,7 @@ function Home() {
             try {
                 const response = await fetch(endpoint, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -52,9 +65,13 @@ function Home() {
                 });
                 const data = await response.json();
                 if (data != null) {
-                    const { username, userid, accessToken } = data;
+                    // const { username, userid, accessToken } = data;
+                    // setUser({ username, userid });
+                    // localStorage.setItem("accesstoken", accessToken);
+                    const { username, userid} = data;
                     setUser({ username, userid });
-                    localStorage.setItem("accesstoken", accessToken);
+
+                    // localStorage.setItem("accesstoken", accessToken);
                 }
 
             } catch (error) {

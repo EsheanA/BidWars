@@ -6,7 +6,8 @@ class Room{
         this.admin = null;
         this.id = uuidv4()
         this.users = [];
-        this.game_ovver = false;
+        this.in_progress = false;
+        this.game_over = false;
         this.highestbidder = null;
         this.items_for_bid = [
             // {
@@ -67,8 +68,23 @@ class Room{
     // setMinBid(bid){
     //     this.minBid = bid;
     // }
-    kickUser(userId){
-        this.users = this.users.filter(kickuser => kickuser.userid != userId)
+    kickUser(userid){
+        this.users = this.users.filter(kickuser => kickuser.userid != userid)
+    }
+    setUserActiveStatus(all, userid, status){
+        for(let i = 0; i<this.users.length; i++){
+            if(all || userid == this.users[i].userid){
+                this.users[i].active = status;
+            }
+        }
+    }
+    getUserActiveStatus(userid){
+        for(let i = 0; i<this.users.length; i++){
+            if(userid == this.users[i].userid){
+                return(this.users[i].active);
+            }
+        }
+        return false;
     }
 }
 module.exports = Room;
