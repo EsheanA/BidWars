@@ -4,11 +4,15 @@ const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const RoomGroup = require('./RoomRelated/RoomGroup');
+
+const userRouter = require('./routes/userRoutes.js');
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 const redis = require('redis');
 const cookie = require("cookie");
 require('dotenv').config()
+const mongoose = require('mongoose');
+const { generateAccessToken, generateRoomAccessToken } = require('../tokenHandling/generateToken');
 const { v4: uuidv4 } = require("uuid");
 const cookieParser = require('cookie-parser');
 
@@ -34,6 +38,8 @@ app.use(cors({
 }));
 app.use(express.json())
 app.use(cookieParser());
+app.use('/users', userRouter);
+
 
 const rooms = new RoomGroup();
 const redisclient = redis.createClient();
@@ -41,17 +47,19 @@ const redisclient = redis.createClient();
 redisclient.on('error', err => console.log('Redis Client Error', err));
 
 
-const generateAccessToken = (user) => {
-  return jwt.sign({ userid: user.userid, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: "5m",
-  });
-};
+// const generateAccessToken = (user) => {
+//   return jwt.sign({ userid: user.userid, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
+//     expiresIn: "5m",
+//   });
+// };
 
-const generateRoomAccessToken = (user, roomid) => {
-  return jwt.sign({ userid: user.userid, username: user.username, roomid }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: "5m",
-  });
-}
+// const generateRoomAccessToken = (user, roomid) => {
+//   return jwt.sign({ userid: user.userid, username: user.username, roomid }, process.env.ACCESS_TOKEN_SECRET, {
+//     expiresIn: "5m",
+//   });
+// }
+
+
 const generateRefreshToken = (user) => {
   return jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET);
 };
@@ -98,6 +106,8 @@ app.post('/createAccount', (req, res) => {
 
   // res.json({ userid: newUser.userid, username: newUser.username, accessToken })
 });
+
+
 
 
 const io = new Server(server, {
@@ -372,9 +382,14 @@ async function startServer() {
     await redisclient.connect();
     console.log('Connected to Redis');
 
+    await mongoose.connect(process.env.MONGODB_URI)
+    console.log("Connected to MongoDB Atlas")
+
     server.listen(3000, () => {
       console.log(`Server is running on port 3000`);
     });
+
+
   } catch (err) {
     console.error('Failed to start server:', err);
   }
