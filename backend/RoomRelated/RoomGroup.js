@@ -9,13 +9,6 @@ class RoomGroup{
         this.privateRooms = new Map();
     }
 
-    // createRoom(user){
-    //     let newRoom = new Room();
-    //     newRoom.setAdminRoom(user);
-    //     let room_code = "ABC";
-    //     this.privateRooms.set(room_code, newRoom);
-    // }
-
     joinPrivateCode(user,str){
         return new Promise((resolve, reject) =>{
             let foundRoom = this.privatesRooms.get(str);
@@ -28,6 +21,7 @@ class RoomGroup{
             }
         })
     }
+
     joinPublicCode(user,str){
         return new Promise((resolve, reject) =>{
             let foundRoom = this.rejoinRooms.get(str);
@@ -40,10 +34,12 @@ class RoomGroup{
             }
         })
     }
+
     roomExist(roomid){
         const room = this.rejoinRooms.get(roomid);
         return((room) ? !room.game_over : false)
     }
+
     joinRoom(){
         return new Promise((resolve) =>{
             for(let room of this.rooms){
@@ -57,6 +53,7 @@ class RoomGroup{
             return resolve({id: newRoom.id, room: newRoom})
         })
     }
+
     leaveRoom(userID, roomId){
         this.rooms = this.rooms.filter((room) => {
           if (room.id === roomId) {
@@ -69,6 +66,7 @@ class RoomGroup{
           return true;
         });
     }
+
 }
 
 module.exports = RoomGroup;

@@ -1,269 +1,380 @@
 /* BattleRoom CSS*/
-.Spotlight{
-    position: relative;
-    margin-top: -20px;
-    background-color: black;
-    /* width: 900px;
+.Spotlight {
+  position: relative;
+  margin-top: -20px;
+  background-color: black;
+  /* width: 900px;
     height: 500px; */
-    height: 50vh;
-    width: 70vw;
-    padding: 50px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  /* .Spotlight:hover{
+  height: 50vh;
+  width: 70vw;
+  padding: 50px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* .Spotlight:hover{
     display: none;
   } */
 
-  .Spotlight > .Spotlight-img{
-    height: 60vh;
-    width: 90vw;
-  }
+.Spotlight>.Spotlight-img {
+  height: 60vh;
+  width: 90vw;
+}
 
-  .itemForBid{
-    margin-top: -27px;
-  }
-  
-  .AvatarSpread{
-    position: absolute;
-    display: flex;
-    bottom: 0px;
-    border-radius: 100px;
-  }
-  
-  .Avatar{
-    background-color: #272727;
-    border: 2px solid green;
-    position: relative;
-    flex: 20%;
-    padding: 5px;
-    border-radius: 50px;
-    align-items: center;
-    justify-content: center;
-    margin: 50px;
-    transition: 0.5s all;
-  }
-  .Avatar:hover{
-    background-color: white;
-    /* background-color: gold; */
-    
-    transition: 0.5s all;
-  }
-  .bidButtons{
-    position: absolute;
-    bottom: -20%;
-    right: 21% ;
-    display: flex;
-    border: 2px solid gold;
-    /* border-radius: 10px; */
-    /* padding: 5px; */
-    /* flex-direction: column; */
-  }
-  .bidButton{
-    /* position: relative; */
-    font-size: large;
-    font-weight: bold;
-    color:black;
-    display:flex;
-    justify-content: center;
-    align-items: center;
-    transition: 0.5s all;
-    /* border-radius: 10px; */
-    /* border: 2px solid gold; */
-    background-color: #272727;
-    color: white;
-    padding: 10px;
-    padding: 1vh 2.5vw;
-    width: 4vw;
-    height: auto;
-    border-right: 2px solid gold;
-    
-  }
-  
-  .bidButton:hover{
-   
-    background-color: green;
-    color:gold;
-    transition: 0.2s all;
-  }
-  .main{
-    background-color: green;
-    width: 6vw;
-    border-right: none;
-  }
-  .main:hover{
-    background-color: darkgreen;
-    /* color:green; */
-    /* border: 2px solid green; */
-  }
-  
-  .centered {
-    color:white;
-    position: absolute;
-    top :70%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-  
-  .itemForBid{
-    position: absolute;
-    top: 60%;
-  }
-  .highestBid{
-    position: absolute;
-    top: 90%;
-    font-size: large;
-    font-weight: bold;
-  }
-  
-  .Balance{
-    color:white;
-    font-size: large;
-    font-weight: bold;
-    position: absolute;
-    top: 10%;
-    left: 90%;
-  }
-  
-  .Chatbubble{
-    position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    top: -75%;
-    right: -50%;
-    /* opacity: 0;
+.itemForBid {
+  margin-top: -27px;
+}
+
+.AvatarSpread {
+  position: absolute;
+  display: flex;
+  bottom: 0px;
+  border-radius: 100px;
+}
+
+.Avatar {
+  background-color: #272727;
+  border: 2px solid green;
+  position: relative;
+  flex: 20%;
+  padding: 5px;
+  border-radius: 50px;
+  align-items: center;
+  justify-content: center;
+  margin: 50px;
+  transition: 0.5s all;
+}
+
+.Avatar:hover {
+  background-color: white;
+  /* background-color: gold; */
+
+  transition: 0.5s all;
+}
+
+.bidButtons {
+  position: absolute;
+  bottom: -20%;
+  right: 21%;
+  display: flex;
+  border: 2px solid gold;
+  /* border-radius: 10px; */
+  /* padding: 5px; */
+  /* flex-direction: column; */
+}
+
+.bidButton {
+  /* position: relative; */
+  font-size: large;
+  font-weight: bold;
+  color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.5s all;
+  /* border-radius: 10px; */
+  /* border: 2px solid gold; */
+  background-color: #272727;
+  color: white;
+  padding: 10px;
+  padding: 1vh 2.5vw;
+  width: 4vw;
+  height: auto;
+  border-right: 2px solid gold;
+
+}
+
+.bidButton:hover {
+
+  background-color: green;
+  color: gold;
+  transition: 0.2s all;
+}
+
+.main {
+  background-color: green;
+  width: 6vw;
+  border-right: none;
+}
+
+.main:hover {
+  background-color: darkgreen;
+  /* color:green; */
+  /* border: 2px solid green; */
+}
+
+.centered {
+  color: white;
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.itemForBid {
+  position: absolute;
+  top: 60%;
+}
+
+.highestBid {
+  position: absolute;
+  top: 90%;
+  font-size: large;
+  font-weight: bold;
+}
+
+.Balance {
+  color: white;
+  font-size: large;
+  font-weight: bold;
+  position: absolute;
+  top: 10%;
+  left: 90%;
+}
+
+.Chatbubble {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: -75%;
+  right: -50%;
+  /* opacity: 0;
     transition: all 0.5s; */
 
-  }
-  /* .Chatbubble:hover{
+}
+
+/* .Chatbubble:hover{
     opacity: 1;
     transition: all 0.5s;
   } */
-  .chatbubbleIMG{
-    height: 25vh;
-    width: auto;
-  }
-  .chatbubbleMessage{
-    position: absolute;
-    color: black;
-    font-size: large;
-    font-weight: bold;
-    height: 5vh;
-    width: 17vh;
-    top: 35%;
-  }
-  
- /*HOMEPAGE CSS*/
-.Home{
-    /* background-color: aqua; */
-    /* border: 2px solid white; */
-    background-color: #fefae0;
-    height: 100%;
-    width:100%;
-
-    /* flex: 1; */
-    
-}
-.Nav{
-    /* padding: 10px; */
-    /* box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px; */
-    /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.5); */
-    box-shadow: rgba(0, 0, 0, 0.45) 0px 25px 20px -20px;
-
+.chatbubbleIMG {
+  height: 25vh;
+  width: auto;
 }
 
-.Body{
-    display: flex;
-    /* border: 2px solid white; */
-    justify-content: center;
-    align-items: center;
-    height: 70vh;
-    /* background-color: red; */
-    /* width:50vh; */
-    /* margin-top: 100px; */
+.chatbubbleMessage {
+  position: absolute;
+  color: black;
+  font-size: large;
+  font-weight: bold;
+  height: 5vh;
+  width: 17vh;
+  top: 35%;
 }
 
-.GamePortal{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: #fefae0;
-    /* border: 5px solid black; */
-    border-radius: 30px;
-    width: 30%;
-    height: 50%;
-    box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
+/*HOMEPAGE CSS*/
+.Home {
+  /* background-color: aqua; */
+  /* border: 2px solid white; */
+  background-color: #fefae0;
+  background-image: url('./images/backgroundHome.png');
+  background-size: cover;
+  /* background-size: 50%;  */
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 100%;
+  width: 100%;
 
-    /* box-shadow: rgba(17, 17, 26, 0.1) 0px 1px 0px, rgba(17, 17, 26, 0.1) 0px 8px 24px, rgba(17, 17, 26, 0.1) 0px 16px 48px; */
-    transition: all 1s;
-    border: 2px solid white;
+  /* flex: 1; */
 
 }
-.GamePortal:hover{
+
+.Nav {
+  /* padding: 10px; */
+  /* box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px; */
+  /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.5); */
+  box-shadow: rgba(0, 0, 0, 0.45) 0px 25px 20px -20px;
+  background-color: #492201;
+  border-bottom: 2px solid #7C3F00;
+
+}
+
+.Nav .Logout {
+  background-color: #795C34;
+  color: white;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.Nav .Logout:hover {
+  /* opacity: 0.33; */
+  background-color: #795C3480;
+  transition: all 0.2s;
+}
+
+.Nav .userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+}
+
+.Nav .userInfo h3{
+  font-weight: bold;
+  font-size: larger;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.Body {
+  display: flex;
+  /* border: 2px solid white; */
+  justify-content: center;
+  align-items: center;
+  height: 70vh;
   /* background-color: red; */
-  height: 60%;
-  width: 35%;
-  /* border:none; */
-  transition: all 0.5s;
-  box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
-}
-.GamePortal > *{
-     margin:10px;
-}
-.BattleButton{
-    background-color: black;
-    border: 2px solid white;
-    padding: 10px;
-    border-radius: 5px;
-}
-.BattleButton:hover{
-    background-color: navy;
-    transition: 0.25s all;
+  /* width:50vh; */
+  /* margin-top: 100px; */
 }
 
-.AccountCreation{
+.GamePortal {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: grey;
-  border: 2px solid white;
-  border-radius: 30px;
+  background-color: #E2CEB3;
+  background-image: 
+    radial-gradient(rgba(0,0,0,1) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,1) 1px, transparent 1px);
+  background-position: 0 0, 2px 2px;
+  background-size: 4px 4px;
+  /* border-radius: 30px; */
   width: 30%;
   height: 50%;
-  transition: all 0.5s;
   box-shadow: rgba(0, 0, 0, 0.17) 0px -23px 25px 0px inset, rgba(0, 0, 0, 0.15) 0px -36px 30px 0px inset, rgba(0, 0, 0, 0.1) 0px -79px 40px 0px inset, rgba(0, 0, 0, 0.06) 0px 2px 1px, rgba(0, 0, 0, 0.09) 0px 4px 2px, rgba(0, 0, 0, 0.09) 0px 8px 4px, rgba(0, 0, 0, 0.09) 0px 16px 8px, rgba(0, 0, 0, 0.09) 0px 32px 16px;
-}
-.AccountCreation:hover{
-  height: 60%;
-  width: 35%;
-  /* border:none; */
-  transition: all 0.5s;
-}
-.AccountCreation > *{
-  margin:10px;
-}
-.AccountCreation > .createAccount{
-  background-color: #272727;
-  border: 2px solid white;
-  padding: 10px;
-  border-radius: 5px;
-}
-.AccountCreation > .createAccount:hover{
-  background-color: navy;
-  transition: 0.25s all;
+  transition: all 1s;
+
 }
 
-.Footer{
+.GamePortal>* {
+  margin: 10px;
+}
+
+.enter-auction-btn {
+  background: linear-gradient(145deg, #7c3f00, #633200);
+  border: none;
+  /* border-radius: 12px; */
+  color: #fff;
+  padding: 16px 28px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.enter-auction-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.3);
+}
+
+.enter-auction-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+
+
+.Footer {
   box-shadow: rgba(0, 0, 0, 0.56) 0px 22px 70px 4px;
   background-color: #61A0AF;
+  background-color: #3e1c00;
   height: 12vh;
   width: 100vw;
   margin: 0px;
- 
 }
 
+/*Registration*/
+.registration {
+  height: 100vh;
+  width: 100vw;
+
+}
+
+.registration .formChoice {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: #fefae0;
+  background-color: whitesmoke;
+  background-image: url('./images/backgroundSignup.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  color: black;
+  height: 70vh;
+}
+
+.toggleForm {
+  background-color: silver;
+  border: 2px solid rgb(108, 107, 107);
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+.toggleForm:hover {
+  border: 2px solid gold;
+  transition: all 0.2s;
+}
+
+.formChoice form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: #203e12;
+  /* background-color: lightg; */
+  /* border: 5px solid silver; */
+
+
+  background: linear-gradient(145deg,
+      #e0e0e0 0%,
+      #c0c0c0 25%,
+      #f0f0f0 50%,
+      #c0c0c0 75%,
+      #e0e0e0 100%);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 40px rgba(0, 0, 0, 0.1);
+  border: 4px solid gold;
+  /* border-radius: 8px; */
+  backdrop-filter: blur(2px);
+
+  border-radius: 200px;
+  height: 50vh;
+  padding: 10px;
+  font-size: medium;
+  font-weight: bold;
+}
+
+.formChoice h2 {
+  color: white;
+}
+
+.formChoice form>* {
+  margin: 10px;
+}
+
+.formChoice form input {
+  background-color: white;
+  padding: 5px;
+
+}
+
+.formChoice form button {
+  /* background-color: white; */
+  padding: 10px;
+  border-radius: 2px;
+  font-size: medium;
+  font-weight: bold;
+  color: white;
+  background-color: silver;
+}
+
+.formChoice form button:hover {
+  background-color: #ffdc73;
+  transition: 1s all;
+}

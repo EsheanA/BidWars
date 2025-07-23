@@ -1,9 +1,26 @@
 import {AppContext} from '../../AppContext/context.jsx';
 import {useContext} from 'react';
-
+import { Link } from "react-router";
 function Nav() {
 
     const [user, setUser] = useContext(AppContext)
+
+    const handleLogout = async()=>{
+        try {
+            const response = await fetch("http://localhost:3000/users/logout", {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({userid: user.userid}),
+            });
+            localStorage.clear()
+            setUser(null)
+        } catch (error) {
+            console.error('Error: ', error);
+        }
+    }
     return (
       <>
        <div className="navbar bg-orange-900 shadow-sm Nav">
@@ -15,15 +32,18 @@ function Nav() {
                         <ul
                             tabIndex={0}
                             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
-                            <li><a>Homepage</a></li>
+                            <li><Link to = {{pathname: "/"}}>Home</Link></li>
+                            <li><Link to = {{pathname: "/registration"}}>Signup</Link></li>
+                            {/* <li><a>Homepage</a></li>
                             <li><a>Portfolio</a></li>
-                            <li><a>About</a></li>
+                            <li><a>About</a></li> */}
                         </ul>
                     </div>
                 </div>
                 <div className="navbar-center">
                     {/* <a className="btn btn-ghost text-xl">BidWars</a> */}
-                    <img src = "/images/logo.png" height = "200px" width = "200px"/>
+                    <Link to = {{pathname: "/"}}><img src = "/images/logo.png" height = "200px" width = "200px"/></Link>
+                    
                     
                 </div>
                 <div className="navbar-end">
@@ -42,8 +62,15 @@ function Nav() {
                             <img src="https://img.daisyui.com/images/profile/demo/batperson@192.webp" />
                         </div>
                     </div> */}
-                    <h3>{user ? user.username : "no user"}</h3>
+                    <div className = "userInfo">
+                        
+                        {user ? <h3>{user.username}</h3>: <Link to = {{pathname: "/registration"}}><h3>Sign Up</h3></Link>}
+                        <h3>{user ? "Balance: $"+ user.balance : "" }</h3>
+                        {user ? <button className = "Logout" onClick = {()=>handleLogout()}><h3>Logout</h3></button> : ""}
+                    </div>
                 </div>
+        
+                
             </div>
       </>
     )
