@@ -1,4 +1,4 @@
-import Nav from '../components/HomeComp/Nav.jsx'
+import Nav from '../components/Nav.jsx'
 import Footer from '../components/Footer.jsx'
 import LoginForm from '../components/forms/LoginForm.jsx';
 import SignupForm from '../components/forms/SignupForm.jsx';

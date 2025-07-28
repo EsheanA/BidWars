@@ -1,10 +1,11 @@
-import {AppContext} from '../../AppContext/context.jsx';
+import {AppContext} from '../AppContext/context.jsx';
 import {useContext} from 'react';
 import { Link } from "react-router";
+import { useNavigate } from 'react-router';
 function Nav() {
 
     const [user, setUser] = useContext(AppContext)
-
+    const navigate = useNavigate()
     const handleLogout = async()=>{
         try {
             const response = await fetch("http://localhost:3000/users/logout", {
@@ -17,6 +18,7 @@ function Nav() {
             });
             localStorage.clear()
             setUser(null)
+            navigate("/")
         } catch (error) {
             console.error('Error: ', error);
         }
@@ -67,6 +69,7 @@ function Nav() {
                         {user ? <h3>{user.username}</h3>: <Link to = {{pathname: "/registration"}}><h3>Sign Up</h3></Link>}
                         <h3>{user ? "Balance: $"+ user.balance : "" }</h3>
                         {user ? <button className = "Logout" onClick = {()=>handleLogout()}><h3>Logout</h3></button> : ""}
+                        {user ? <button className = "Logout" onClick = {()=>navigate("/Inventory")}><h3>Inventory</h3></button> : ""}
                     </div>
                 </div>
         

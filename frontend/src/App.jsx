@@ -6,6 +6,7 @@ import Avatar from './components/Avatar.jsx';
 import BattleRoom from './pages/BattleRoom.jsx'
 import Home from './pages/Home.jsx'
 import Registration from './pages/Registration.jsx';
+import Inventory from './pages/Inventory.jsx';
 import { Routes, Route } from 'react-router-dom';
 function App() {
   return (
@@ -15,9 +16,9 @@ function App() {
           <Route path = "/" element = {<Home />} default/>
           <Route path = "/registration" element = {<Registration />}/>
           <Route path = "/BattleRoom" element = {<BattleRoom />} />
-          
+          <Route path = "/Inventory" element = {<Inventory />}/>
         </Routes>
-
+        
       </div>
     </>
   )

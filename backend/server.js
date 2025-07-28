@@ -22,7 +22,6 @@ const User = require('./models/User');
 
 function validateOrigin(origin) {
   const originSlice = origin.slice(0, 17)
-  // console.log(originSlice === "http://localhost:")
   if (originSlice === "http://localhost:") {
     return true;
   }
@@ -91,7 +90,7 @@ async function distributeItems(postgamedata){
     else{
       usermap.set(userid, bid)
     }
-    const hashcode = crypto.createHash('sha256').update(name + userid).digest('hex');
+    const hashcode = crypto.createHash('sha256').update(name + userid).digest('hex'); //item hash composed of item name & userid
     const existingItem = await Item.findOne(
       {hashcode: hashcode}
     )
@@ -253,13 +252,15 @@ io.on("connection", async (socket) => {
   }
 
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async() => {
     console.log("left")
     rooms.leaveRoom(userID, roomID);
     if (rooms.roomExist(roomID)) {
       console.log("room exists")
       if (!currRoom.in_progress)
         io.to(roomID).emit('user list', { userlist: currRoom.users })
+    }else{
+      await redisclient.del([JSON.stringify(roomID)]);
     }
 
   });
@@ -268,102 +269,95 @@ io.on("connection", async (socket) => {
 });
 
 async function handleGameLogic(room) {
-  const secs = 18;
-  const numofitems = room.items_for_bid.length;
-  if (!room.private) {
-    const handler = ({ user, balance, bid }) => {
-      bidHandle(user, balance, bid, room);
-    };
+  try{
+    const secs = 18;
+    const numofitems = room.items_for_bid.length;
+    if (!room.private) {
+      const handler = ({ user, balance, bid }) => {
+        bidHandle(user, balance, bid, room);
+      };
 
-    let item_index = -1;
-    io.to(room.id).emit("begin_game", { balance: room.maxBalance, bidOptions: room.bidOptions })
-    const roomdata = {}
-    room.users.forEach((user) => {
-      roomdata[JSON.stringify(user.userid)] = room.maxBalance;
-    })
-    roomdata.highestbid_data = null;
-    roomdata.currentItem = null;
-    roomdata.postgame = [];
-    room.highestbidder = {user: null, bid: null};
-    await redisclient.set(JSON.stringify(room.id), JSON.stringify(roomdata)) 
-    console.log("game begin")
-    room.in_progress = true;
+      let item_index = -1;
+      io.to(room.id).emit("begin_game", { balance: room.maxBalance, bidOptions: room.bidOptions })
+      const roomdata = {}
+      room.users.forEach((user) => {
+        roomdata[JSON.stringify(user.userid)] = room.maxBalance;
+      })
+      roomdata.highestbid_data = null;
+      roomdata.currentItem = null;
+      roomdata.postgame = [];
+      room.highestbidder = {user: null, bid: null};
+      await redisclient.set(JSON.stringify(room.id), JSON.stringify(roomdata)) 
+      console.log("game begin")
+      room.in_progress = true;
 
-    let round = async () => {
-      const sockets = await io.in(room.id).fetchSockets()
-      item_index += 1;
+      let round = async () => {
+        const sockets = await io.in(room.id).fetchSockets()
+        item_index += 1;
 
-      //assign won item to top bidder
-      if (item_index > 0) {
-        let data = await redisclient.get(JSON.stringify(room.id))
-        data = JSON.parse(data)
-        if (data.highestbid_data) {
-          const { user, bid } = data.highestbid_data;
+        //assign won item to top bidder
+        if (item_index > 0) {
+          let data = await redisclient.get(JSON.stringify(room.id))
+          data = JSON.parse(data)
+          if (data.highestbid_data) {
+            const { user, bid } = data.highestbid_data;
 
-          if (user) {
-            let originalBal = data[JSON.stringify(user.userid)];
-            data[JSON.stringify(user.userid)] = originalBal - bid;
+            if (user) {
+              let originalBal = data[JSON.stringify(user.userid)];
+              data[JSON.stringify(user.userid)] = originalBal - bid;
+              
+              data.postgame.push({ user, item: data.currentItem, bid })
+
+              room.postgame.push({ user, item: data.currentItem, bid })
+              io.to(room.id).emit("updated_balance", { userid: user.userid, balance: data[JSON.stringify(user.userid)] })
+              data.highestbid_data = null;
+
+
+              updateRedisData(room.id, data)
+            }
             
-            data.postgame.push({ user, item: data.currentItem, bid })
-
-            room.postgame.push({ user, item: data.currentItem, bid })
-            io.to(room.id).emit("updated_balance", { userid: user.userid, balance: data[JSON.stringify(user.userid)] })
-            data.highestbid_data = null;
-
-
-            updateRedisData(room.id, data)
+            
           }
-          
-          
         }
-      }
 
-      if (item_index >= room.items_for_bid.length) {
+        if (item_index >= room.items_for_bid.length) {
 
-        let data = await redisclient.get(JSON.stringify(room.id));
-        if(data){
-          data = JSON.parse(data);
-          console.log(data.postgame)
-          distributeItems(data.postgame)
+          let data = await redisclient.get(JSON.stringify(room.id));
+          if(data){
+            data = JSON.parse(data);
+            console.log(data.postgame)
+            distributeItems(data.postgame)
+          }
+      
+          room.game_over = true;
+          io.in(room.id).disconnectSockets();
+          io.in(room.id).socketsLeave(room.id);
+          console.log("game over")
+          await redisclient.del(JSON.stringify(room.id))
         }
-    
-        room.game_over = true;
-        io.in(room.id).disconnectSockets();
-        io.in(room.id).socketsLeave(room.id);
-        console.log("game over")
-        await redisclient.del(JSON.stringify(room.id))
-        // if(!room.game_over){
-        //   io.in(room.id).emit("game over", {farewell: "Auction has ended"})
-        //   setTimeout(() => {
-        //     room.game_over = true;
-        //     io.in(room.id).disconnectSockets();
-        //     io.in(room.id).socketsLeave(room.id);
-        //     console.log("game over")
-        //   }, 10*1000);
-        // }
-        // await redisclient.del(JSON.stringify(room.id))
-        // clearInterval()
-      }
-      else {
-        let item = room.items_for_bid[item_index]
-        
-        let roomdata = await redisclient.get(JSON.stringify(room.id))
+        else {
+          let item = room.items_for_bid[item_index]
+          
+          let roomdata = await redisclient.get(JSON.stringify(room.id))
 
-        roomdata = JSON.parse(roomdata);
-        roomdata.currentItem = item;
-        updateRedisData(room.id, roomdata)
+          roomdata = JSON.parse(roomdata);
+          roomdata.currentItem = item;
+          updateRedisData(room.id, roomdata)
 
-        room.highestbidder = { user: null, bid: item.starting_bid }
-        io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: "" });
-        itemBid(room, item, sockets, handler, secs)
+          room.highestbidder = { user: null, bid: item.starting_bid }
+          io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: "" });
+          itemBid(room, item, sockets, handler, secs)
 
-      }
-    };
-    round()
-    const interval = setInterval(round, secs * 1000)
-    setTimeout(() => {
-      clearInterval(interval);
-    }, secs * 1000 * numofitems + 20);
+        }
+      };
+      round()
+      const interval = setInterval(round, secs * 1000)
+      setTimeout(() => {
+        clearInterval(interval);
+      }, secs * 1000 * numofitems + 20);
+
+  }
+  }catch(error){
 
   }
 }
@@ -411,7 +405,6 @@ async function startServer() {
 
     await mongoose.connect(process.env.MONGODB_URI)
     console.log("Connected to MongoDB Atlas")
-
     server.listen(3000, () => {
       console.log(`Server is running on port 3000`);
     });
