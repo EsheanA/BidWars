@@ -25,7 +25,7 @@ function Home() {
     const updateMe = async()=>{
             try {
                 const user_id = localStorage.getItem("userid")
-                if(user_id){
+                if(user || user_id){
                     const endpoint = `http://localhost:3000/users/me`;
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -33,14 +33,13 @@ function Home() {
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ userid: user_id }),
+                        body: JSON.stringify({ userid: user ? user.userid : user_id}),
                     });
 
                     const data = await response.json();
-                    if (data.username) {
-                        const { username, userid, balance } = data;
-                        setUser({ username, userid, balance });
-                    }
+                    const { username, userid, balance } = data;
+                    setUser({ username, userid, balance });
+     
             }
             }catch(error) {
                 console.error('Error fetching data:', error);
