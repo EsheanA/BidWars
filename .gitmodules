@@ -1,3 +1,0 @@
-[submodule "backend/ollama"]
-	path = backend/ollama
-	url = https://github.com/haguro/elevenlabs-go.git

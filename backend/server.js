@@ -273,6 +273,8 @@ io.on("connection", async (socket) => {
       console.log("room exists")
       if (!currRoom.in_progress)
         io.to(roomID).emit('user list', { userlist: currRoom.users })
+    }else{
+      
     }
 
   });
