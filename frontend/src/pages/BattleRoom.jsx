@@ -1,23 +1,12 @@
-import Avatar from '../components/Avatar.jsx';
-import Spotlight from '../components/Spotlight.jsx';
-import { useState, useEffect, useRef} from 'react'
+import Avatar from '../components/BattleRoom/Avatar.jsx';
+import Spotlight from '../components/BattleRoom/Spotlight.jsx';
+
+import {useState, useEffect, useRef} from 'react'
 import {io} from 'socket.io-client';
 import {AppContext} from '../AppContext/context.jsx'
 import {useContext} from 'react';
 import {useNavigate} from "react-router-dom"
-// const data = [
-//     {
-//         name: "car.png",
-//         height: "200",
-//         width: "300"
-//     },
-//     {
-//         name: "goldtoilet.png",
-//         height: "200",
-//         width: "160"
-//     },
 
-// ]
 function BattleRoom(){
         const navigate = useNavigate();
         const socket = useRef(null);
@@ -29,13 +18,11 @@ function BattleRoom(){
         const [highestBidder, setHighestBidder] = useState(null)
         const [gamestate, setGamestate] = useState(false)
         const [timer, setTimer] = useState(null)
-
-        // hardcoded
+        const [announcement, setAnnouncement] = useState("")
         const [bidOptions, setBidOptions] = useState([])
 
     useEffect(() => {
         let roomToken = localStorage.getItem("roomtoken");
-        // let accessToken = localStorage.getItem("accesstoken");
         socket.current = io("http://localhost:3000", { 
             autoConnect: false,
             withCredentials: true,
@@ -44,6 +31,7 @@ function BattleRoom(){
                 userid: user?.userid
             }
         })
+
         socket.current.connect()
         if(localStorage.getItem("game") != null){
             const game = JSON.parse(localStorage.getItem("game"));
@@ -62,10 +50,6 @@ function BattleRoom(){
         });
         socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
         socket.current.on("user data", data => {
-            // localStorage.setItem("user", JSON.stringify({
-            //     userid: data.id,
-            //     username: data.username
-            // }))
             setUser({username: data.username, userid: data.id})
         })
         socket.current.on("user list", (data) => {
@@ -74,10 +58,15 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", data => {
+    
             setItemForBid(data.item)
             setHighestBid(data.item.starting_bid)
             setHighestBidder(null)
             setTimer(data.timer)
+
+            setAnnouncement(data.item.name)
+            playAudio(data.item.name+"_"+data.item.starting_bid + ".mp3")
+            
         })
         socket.current.on("current bid", data => {
             if(data){
@@ -98,22 +87,6 @@ function BattleRoom(){
                 
             }
         })
-
-        // socket.current.on("updated_balance", data =>{
-        //     if(data){
-                
-               
-        //         const userbackup = JSON.parse(localStorage.getItem("user"))
-        //         if( (user && data.userid == user.userid) || (userbackup && userbackup.userid == data.userid)){
-        //             setBalance(data.balance)
-        //             console.log(data.balance)
-        //             localStorage.setItem("game", JSON.stringify({
-        //                 balance: data.balance,
-        //                 bidOptions: data.bidOptions
-        //             }))
-        //         }
-        //     }
-        // })
         
         return() =>{
             socket.current.disconnect()
@@ -122,6 +95,18 @@ function BattleRoom(){
         }
 
     }, []);
+
+    const playAudio = (filename) => {
+        const audio = new Audio(`http://localhost:3000/audio/${filename}`);
+        audio.play().catch((err) => {
+            console.error('Error playing audio:', err);
+        });
+        audio.onended = () => {
+            console.log("✅ Audio finished playing.");
+            setAnnouncement("")
+        };
+    }
+
     useEffect(()=>{
         if(user){
             socket.current.on("updated_balance", data =>{
@@ -152,13 +137,7 @@ function BattleRoom(){
     const makeBid = (val, player) =>{
         console.log("pop")
         if(itemForBid){
-            // console.log("user: ")
-            // console.log(player)
-            // console.log(highestBid+val)
-
             socket.current.emit("bid", {user: player, balance, bid: highestBid+val})
-            // setHighestBid(val)
-            // setHighestBidder(player)
         }
     }
 
@@ -170,7 +149,8 @@ function BattleRoom(){
     return(
         <>
             <div className = "Balance">Balance: ${balance}  {timer? ` Time Left: ${timer}`: ""}</div>
-            <Spotlight item = {itemForBid} highestBid = {highestBid}/>
+            <Spotlight item = {itemForBid} announcement = {announcement} highestBid = {highestBid}/>
+
             <div className = "AvatarSpread">
                 {renderUsers}
             </div>

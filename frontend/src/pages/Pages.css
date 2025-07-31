@@ -36,7 +36,7 @@
 
 .Avatar {
   background-color: #272727;
-  border: 2px solid green;
+  /* border: 2px solid green; */
   position: relative;
   flex: 20%;
   padding: 5px;
@@ -47,11 +47,32 @@
   transition: 0.5s all;
 }
 
-.Avatar:hover {
-  background-color: white;
-  /* background-color: gold; */
 
+
+.Auctioneer{
+  background-color: #272727;
+  position: absolute;
+  height: 20vh;
+  width: auto;
+  top: 65%;
+  left: -10%;
+  flex: 20%;
+  padding: 10px;
+  border-radius: 50px;
+  align-items: center;
+  justify-content: center;
+  margin: 50px;
   transition: 0.5s all;
+}
+.Auctioneer:hover{
+  top:90%;
+  left:38%;
+  background-color: white;
+  transition: all 0.5s;
+}
+.Auctioneer img{
+  height: 100%;
+  width: auto;
 }
 
 .bidButtons {
@@ -201,6 +222,11 @@
   display: flex;
   flex-direction: column;
   align-items: end;
+}
+.Nav .userInfo button{
+  /* margin:10px; */
+  height: fit-content;
+  margin: 5px;
 }
 
 .Nav .userInfo h3{
