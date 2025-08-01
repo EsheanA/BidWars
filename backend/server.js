@@ -21,7 +21,7 @@ const User = require('./models/User');
 // import { Redis } from '@upstash/redis'
 const { createClient } = require('redis');
 
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 
 // app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/items', express.static(path.join(__dirname, 'items')));
