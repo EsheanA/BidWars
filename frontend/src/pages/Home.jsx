@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { AppContext } from '../AppContext/context.jsx';
 import { useContext } from 'react';
 import { useNavigate } from "react-router-dom"
-
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 function Home() {
     const navigate = useNavigate();
@@ -26,7 +26,7 @@ function Home() {
             try {
                 const user_id = localStorage.getItem("userid")
                 if(user || user_id){
-                    const endpoint = `http://localhost:3000/users/me`;
+                    const endpoint = `${apiURL}/users/me`;
                     const response = await fetch(endpoint, {
                         method: 'POST',
                         credentials: 'include',
@@ -49,7 +49,7 @@ function Home() {
     const handleSubmit = (e) => {
         e.preventDefault()
         if (user) {
-            fetch("http://localhost:3000", {
+            fetch(`${apiURL}`, {
                 method: "POST",
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

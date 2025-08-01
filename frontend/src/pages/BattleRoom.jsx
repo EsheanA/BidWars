@@ -5,6 +5,10 @@ import {io} from 'socket.io-client';
 import {AppContext} from '../AppContext/context.jsx'
 import {useContext} from 'react';
 import {useNavigate} from "react-router-dom"
+
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+
+// dotenv.config();
 // const data = [
 //     {
 //         name: "car.png",
@@ -36,7 +40,7 @@ function BattleRoom(){
     useEffect(() => {
         let roomToken = localStorage.getItem("roomtoken");
         // let accessToken = localStorage.getItem("accesstoken");
-        socket.current = io("http://localhost:3000", { 
+        socket.current = io(apiURL, { 
             autoConnect: false,
             withCredentials: true,
             auth: {

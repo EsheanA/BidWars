@@ -2,13 +2,15 @@ import {AppContext} from '../AppContext/context.jsx';
 import {useContext} from 'react';
 import { Link } from "react-router";
 import { useNavigate } from 'react-router';
+const apiUrl = import.meta.env.VITE_SERVER_BASE_URL;
+
 function Nav() {
 
     const [user, setUser] = useContext(AppContext)
     const navigate = useNavigate()
     const handleLogout = async()=>{
         try {
-            const response = await fetch("http://localhost:3000/users/logout", {
+            const response = await fetch(`${apiUrl}/users/logout`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {

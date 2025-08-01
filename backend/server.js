@@ -15,10 +15,14 @@ const { generateAccessToken, generateRoomAccessToken } = require('./tokenHandlin
 const { v4: uuidv4 } = require("uuid");
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
-
+const path = require('path')
 const Item = require('./models/Item');
 const User = require('./models/User');
 
+app.use(express.static(path.join(__dirname, 'public')));
+
+// app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/items', express.static(path.join(__dirname, 'items')));
 
 function validateOrigin(origin) {
   const originSlice = origin.slice(0, 17)

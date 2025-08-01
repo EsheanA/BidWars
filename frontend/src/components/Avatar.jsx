@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import Chatbubble from './Chatbubble'
+
 function Avatar({name, self, bidOptions, makeBid, highestBidder, user, active}) {
     const [readyBid, setReadyBid] = useState(false)
     const buttons = bidOptions?.map(butt =>{
@@ -13,7 +14,7 @@ function Avatar({name, self, bidOptions, makeBid, highestBidder, user, active}) 
           {/* {highestBidder?.user.userid == user.userid ? <img className = "Chatbubble" src = "/images/chatbubble.png" width="75" height="75"/> : <div/>} */}
           {/* <img className = "Chatbubble" src = "/images/chatbubble.png"/> */}
           {highestBidder?.user?.userid == user.userid ? <Chatbubble message = {highestBidder.message}/> : <div/>}
-          <img src = "/images/user2.png" width="150" height="150"/>
+          <img src = {`./images/user2.png`} width="150" height="150"/>
           <div className = "centered">{name}</div>
           <div className = "bidButtons">
             {readyBid ? buttons : <span/>}

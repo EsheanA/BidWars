@@ -1,6 +1,6 @@
 
 import {useState, useEffect,useRef} from 'react'
-
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 function Spotlight({item, highestBid}) {
     const [visible, setVisible] = useState(true)
     const imgRef = useRef(null)
@@ -43,7 +43,7 @@ function Spotlight({item, highestBid}) {
         <div className = "Spotlight" style={{ display: visible ? "flex" : "none" }}>
             <img ref={imgRef} src = {"/items/" + item?.url} style = {{display: "none"}}/>
             <img className = "Spotlight-img" src = "/images/spotlight.jpg"/>
-            {item ? <img className = "itemForBid"  src = {"/items/" + item?.url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/> : <span/>}
+            {item ? <img className = "itemForBid"  src = {`${apiURL}/items/` + item?.url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/> : <span/>}
             {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>}
         </div>
       </>

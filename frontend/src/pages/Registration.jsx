@@ -6,7 +6,9 @@ import { useState, useEffect } from "react"
 import {AppContext} from '../AppContext/context.jsx';
 import {useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
+console.log(apiURL)
 function Registration(){
     const [user, setUser] = useContext(AppContext)
     const [username, setUsername] = useState("")
@@ -17,7 +19,7 @@ function Registration(){
         e.preventDefault()
         const path = toggle ? "signup" : "login";
         if (username != "" && password != "") {
-            const endpoint = `http://localhost:3000/users/${path}`;
+            const endpoint = `${apiURL}/users/${path}`;
             try {
                 const response = await fetch(endpoint, {
                     method: 'POST',

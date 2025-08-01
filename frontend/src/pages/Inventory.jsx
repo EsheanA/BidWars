@@ -4,6 +4,8 @@ import Footer from '../components/Footer.jsx'
 import { AppContext } from '../AppContext/context.jsx';
 import { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+
 function Inventory() {
     const [user, setUser] = useContext(AppContext)
     const [items, setItems] = useState([])
@@ -15,7 +17,7 @@ function Inventory() {
     const fetchItems = async () => {
         try{
             if(user){
-                const endpoint = `http://localhost:3000/users/items`;
+                const endpoint = `${apiURL}/users/items`;
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     credentials: 'include',
