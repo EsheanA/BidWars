@@ -7,7 +7,7 @@ const RoomGroup = require('./RoomRelated/RoomGroup');
 const userRouter = require('./routes/userRoutes.js');
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
-const redis = require('redis');
+// const redis = require('redis');
 const cookie = require("cookie");
 require('dotenv').config()
 const mongoose = require('mongoose');
@@ -18,7 +18,8 @@ const crypto = require('crypto');
 const path = require('path')
 const Item = require('./models/Item');
 const User = require('./models/User');
-import { Redis } from '@upstash/redis'
+// import { Redis } from '@upstash/redis'
+const { createClient } = require('redis');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
