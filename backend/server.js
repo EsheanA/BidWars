@@ -50,6 +50,10 @@ app.use(express.json())
 app.use(cookieParser());
 app.use('/users', userRouter);
 app.use(cors({ origin: 'https://bid-wars-ten.vercel.app', credentials: true }));
+app.options('*', cors({
+  origin: 'https://bid-wars-ten.vercel.app',
+  credentials: true
+}));
 
 const rooms = new RoomGroup();
 // const redisclient = redis.createClient();
