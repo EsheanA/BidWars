@@ -26,13 +26,13 @@ const { createClient } = require('redis');
 // app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/items', express.static(path.join(__dirname, 'items')));
 
-function validateOrigin(origin) {
-  const originSlice = origin.slice(0, 17)
-  if (originSlice === "http://localhost:") {
-    return true;
-  }
-  return false;
-}
+// function validateOrigin(origin) {
+//   const originSlice = origin.slice(0, 17)
+//   if (originSlice === "http://localhost:") {
+//     return true;
+//   }
+//   return false;
+// }
 
 // app.use(cors({
 //   origin: function (origin, callback) {
@@ -49,11 +49,19 @@ function validateOrigin(origin) {
 app.use(express.json())
 app.use(cookieParser());
 app.use('/users', userRouter);
-app.use(cors({ origin: 'https://bid-wars-ten.vercel.app', credentials: true }));
-app.options('*', cors({
+
+// app.use(cors({ origin: 'https://bid-wars-ten.vercel.app', credentials: true }));
+// app.options('*', cors({
+//   origin: 'https://bid-wars-ten.vercel.app',
+//   credentials: true
+// }));
+
+const corsOpts = {
   origin: 'https://bid-wars-ten.vercel.app',
-  credentials: true
-}));
+  credentials: true,
+};
+app.use(cors(corsOpts));         
+app.options('/*', cors(corsOpts));  
 
 const rooms = new RoomGroup();
 // const redisclient = redis.createClient();
