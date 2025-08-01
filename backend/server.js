@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const path = require('path')
 const Item = require('./models/Item');
 const User = require('./models/User');
+import { Redis } from '@upstash/redis'
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -48,7 +49,14 @@ app.use('/users', userRouter);
 
 
 const rooms = new RoomGroup();
-const redisclient = redis.createClient();
+// const redisclient = redis.createClient();
+const redisclient = createClient({
+  url: process.env.REDIS_URL,
+  socket: {
+    tls: true,
+    rejectUnauthorized: false,
+  }
+});
 
 redisclient.on('error', err => console.log('Redis Client Error', err));
 
