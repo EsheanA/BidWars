@@ -45,6 +45,11 @@ app.use('/items', express.static(path.join(__dirname, 'items')));
 //   credentials: true
 // }));
 
+const corsOpts = {
+  origin: 'https://bid-wars-ten.vercel.app',
+  credentials: true,
+};
+app.use(cors(corsOpts));  
 
 app.use(express.json())
 app.use(cookieParser());
@@ -56,11 +61,7 @@ app.use('/users', userRouter);
 //   credentials: true
 // }));
 
-const corsOpts = {
-  origin: 'https://bid-wars-ten.vercel.app',
-  credentials: true,
-};
-app.use(cors(corsOpts));         
+       
 // app.options('/*', cors(corsOpts));  
 
 const rooms = new RoomGroup();
