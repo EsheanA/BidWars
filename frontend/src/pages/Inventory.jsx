@@ -1,4 +1,4 @@
-import ItemGrid from '../components/Inventory/itemGrid.jsx';
+import ItemGrid from '../components/Inventory/ItemGrid.jsx';
 import Nav from '../components/Nav.jsx'
 import Footer from '../components/Footer.jsx'
 import { AppContext } from '../AppContext/context.jsx';

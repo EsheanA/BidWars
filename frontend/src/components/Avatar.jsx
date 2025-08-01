@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import Chatbubble from './Chatbubble'
+import Chatbubble from './Chatbubble.jsx'
 
 function Avatar({name, self, bidOptions, makeBid, highestBidder, user, active}) {
     const [readyBid, setReadyBid] = useState(false)
