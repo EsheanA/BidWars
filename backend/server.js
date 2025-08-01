@@ -34,20 +34,22 @@ function validateOrigin(origin) {
   return false;
 }
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || validateOrigin(origin)) {
-      return callback(null, true);
-    }
-    else
-      return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     if (!origin || validateOrigin(origin)) {
+//       return callback(null, true);
+//     }
+//     else
+//       return callback(new Error('Not allowed by CORS'));
+//   },
+//   credentials: true
+// }));
+
+
 app.use(express.json())
 app.use(cookieParser());
 app.use('/users', userRouter);
-
+app.use(cors({ origin: 'https://bid-wars-cecjr233s-esheanas-projects.vercel.app/', credentials: true }));
 
 const rooms = new RoomGroup();
 // const redisclient = redis.createClient();
