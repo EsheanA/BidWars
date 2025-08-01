@@ -61,7 +61,7 @@ const corsOpts = {
   credentials: true,
 };
 app.use(cors(corsOpts));         
-app.options('/*', cors(corsOpts));  
+// app.options('/*', cors(corsOpts));  
 
 const rooms = new RoomGroup();
 // const redisclient = redis.createClient();
@@ -155,16 +155,7 @@ async function distributeItems(postgamedata){
 
 
 const io = new Server(server, {
-  cors: {
-    origin: function (origin, callback) {
-      if (!origin || validateOrigin(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    },
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
+  cors: corsOpts,
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: false,
