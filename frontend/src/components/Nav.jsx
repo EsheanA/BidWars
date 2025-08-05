@@ -70,8 +70,10 @@ function Nav() {
                         
                         {user ? <h3>{user.username}</h3>: <Link to = {{pathname: "/registration"}}><h3>Sign Up</h3></Link>}
                         <h3>{user ? "Balance: $"+ user.balance : "" }</h3>
-                        {user ? <button className = "Logout" onClick = {()=>handleLogout()}><h3>Logout</h3></button> : ""}
-                        {user ? <button className = "Logout" onClick = {()=>navigate("/Inventory")}><h3>Inventory</h3></button> : ""}
+                        <div style={{display: 'flex'}}>
+                            {user ? <button className = "Logout" onClick = {()=>handleLogout()}><h3>Logout</h3></button> : ""}
+                            {user ? <button className = "Logout" onClick = {()=>navigate("/Inventory")}><h3>Inventory</h3></button> : ""}
+                        </div>
                     </div>
                 </div>
         

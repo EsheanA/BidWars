@@ -36,6 +36,7 @@ function Inventory() {
             }
         }catch(error){
             console.error(error)
+            navigate("/")
         }
         
     }

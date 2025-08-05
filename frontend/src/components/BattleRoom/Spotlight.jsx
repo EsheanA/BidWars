@@ -1,10 +1,14 @@
 
 import {useState, useEffect,useRef} from 'react'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
-function Spotlight({item, highestBid}) {
+import Auctioneer from "./Auctioneer"
+
+function Spotlight({item, announcement, highestBid}) {
+
     const [visible, setVisible] = useState(true)
     const imgRef = useRef(null)
     const [isImage, setIsImage] = useState(false)
+    
     useEffect(()=>{
       if(item){
         setVisible((false))
@@ -29,6 +33,10 @@ function Spotlight({item, highestBid}) {
           console.log(img.naturalWidth)
           console.log(img.naturalHeight)
           setIsImage(img.naturalWidth > img.naturalHeight);
+          // if(announcement == "")
+          //   setAnnouncement("diddy")
+          // else
+          //   setAnnouncement("")
 
         };
         img.addEventListener('load', handleLoad);
@@ -46,6 +54,7 @@ function Spotlight({item, highestBid}) {
             {item ? <img className = "itemForBid"  src = {`${apiURL}/items/` + item?.url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/> : <span/>}
             {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>}
         </div>
+        <Auctioneer announcement = {announcement}/>
       </>
     )
   }

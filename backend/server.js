@@ -5,6 +5,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const RoomGroup = require('./RoomRelated/RoomGroup');
 const userRouter = require('./routes/userRoutes.js');
+
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 // const redis = require('redis');
@@ -12,16 +13,18 @@ const cookie = require("cookie");
 require('dotenv').config()
 const mongoose = require('mongoose');
 const { generateAccessToken, generateRoomAccessToken } = require('./tokenHandling/generateToken');
-const { v4: uuidv4 } = require("uuid");
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
-const path = require('path')
 const Item = require('./models/Item');
 const User = require('./models/User');
 // import { Redis } from '@upstash/redis'
 const { createClient } = require('redis');
 
-// app.use(express.static(path.join(__dirname, 'public')));
+const path = require('path');
+const {createVoicelines} = require('./ollama/child.js')
+app.use('/audio', express.static(path.join(__dirname, 'audioFiles')));
+
+
 
 // app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/items', express.static(path.join(__dirname, 'items')));
@@ -77,7 +80,15 @@ const redisclient = createClient({
 redisclient.on('error', err => console.log('Redis Client Error', err));
 
 
-
+app.post('/generateLines', async(req, res) => {
+  try{
+    await createVoicelines(["gold_300", "diamond_200", "airpods_600"])
+    // console.log("pop")
+    res.json({message: "success"})
+  }catch(error){
+    res.status(500).json({error: error})
+  }
+})
 
 
 app.post('/', (req, res) => {
@@ -222,6 +233,8 @@ io.on("connection", async (socket) => {
           currRoom = room;
           io.to(socket.id).emit('user data', { id: user.userid, username: user.username })
 
+
+
           setTimeout(() => {
             io.to(id).emit('user list', { userlist: room.users })
           }, "1000");
@@ -279,7 +292,7 @@ io.on("connection", async (socket) => {
       if (!currRoom.in_progress)
         io.to(roomID).emit('user list', { userlist: currRoom.users })
     }else{
-      await redisclient.del([JSON.stringify(roomID)]);
+      
     }
 
   });
@@ -289,6 +302,17 @@ io.on("connection", async (socket) => {
 
 async function handleGameLogic(room) {
   try{
+    
+    var items = room.items_for_bid
+    var newitems = []
+    items.forEach((i, index, array) => {
+      // Modify the element at the current index within the original array
+      newitems.push(i.name + "_"+ i.starting_bid)
+    });
+    console.log(newitems)
+    await createVoicelines(newitems)
+    
+
     const secs = 18;
     const numofitems = room.items_for_bid.length;
     if (!room.private) {

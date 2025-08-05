@@ -11,9 +11,16 @@ function Home() {
     const navigate = useNavigate();
     const [user, setUser] = useContext(AppContext)
 
+    // const AudioPlayer = ({ filename }) => {
+    //     const playAudio = () => {
+    //     //   const audio = new Audio(`http://localhost:3000/audio/${filename}`);
+    //       audio.play().catch((err) => {
+    //         console.error('Error playing audio:', err);
+    //       });
+    //     };
 
     useEffect(() => {
-
+        
         if (localStorage.getItem("roomtoken")) {
             localStorage.removeItem("roomtoken")
         }
