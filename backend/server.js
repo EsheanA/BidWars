@@ -16,26 +16,27 @@ const { generateAccessToken, generateRoomAccessToken } = require('./tokenHandlin
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const Item = require('./models/Item');
-const User = require('./models/User');
+const User = require('./models/User')
 // import { Redis } from '@upstash/redis'
 const { createClient } = require('redis');
+
+
+// app.use(express.static(path.join(__dirname, 'public')));
 
 const path = require('path');
 const {createVoicelines} = require('./ollama/child.js')
 app.use('/audio', express.static(path.join(__dirname, 'audioFiles')));
 
-
-
 // app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/items', express.static(path.join(__dirname, 'items')));
 
-// function validateOrigin(origin) {
-//   const originSlice = origin.slice(0, 17)
-//   if (originSlice === "http://localhost:") {
-//     return true;
-//   }
-//   return false;
-// }
+function validateOrigin(origin) {
+  const originSlice = origin.slice(0, 17)
+  if (originSlice === "http://localhost:") {
+    return true;
+  }
+  return false;
+}
 
 // app.use(cors({
 //   origin: function (origin, callback) {
@@ -48,10 +49,21 @@ app.use('/items', express.static(path.join(__dirname, 'items')));
 //   credentials: true
 // }));
 
+// const corsOpts = {
+//   origin: 'https://bid-wars-ten.vercel.app',
+//   credentials: true,
+// };
+
 const corsOpts = {
-  origin: 'https://bid-wars-ten.vercel.app',
-  credentials: true,
-};
+  origin: function (origin, callback) {
+        if (!origin || validateOrigin(origin)) {
+          return callback(null, true);
+        }
+        else
+          return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true
+}
 app.use(cors(corsOpts));  
 
 app.use(express.json())
