@@ -1,23 +1,18 @@
 import Nav from '../components/Nav.jsx';
 import Footer from '../components/Footer.jsx';
+import AuctionDisplay from '../components/HomeComp/AuctionDisplay.jsx';
 import './Pages.css';
 import { useState, useEffect } from "react"
 import { AppContext } from '../AppContext/context.jsx';
 import { useContext } from 'react';
 import { useNavigate } from "react-router-dom"
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 function Home() {
     const navigate = useNavigate();
     const [user, setUser] = useContext(AppContext)
-
-    // const AudioPlayer = ({ filename }) => {
-    //     const playAudio = () => {
-    //     //   const audio = new Audio(`http://localhost:3000/audio/${filename}`);
-    //       audio.play().catch((err) => {
-    //         console.error('Error playing audio:', err);
-    //       });
-    //     };
 
     useEffect(() => {
         
@@ -75,15 +70,16 @@ function Home() {
         <div className="Home">
             <Nav />
             <div className="Body">
-                <div className="GamePortal" >
+                <div className="GamePortal" style = {{display: "none"}}>
                     {/* <input type = "text" /> */}
                     {/* <input type="text" placeholder='username' className="input input-secondary" value = {username} onChange = {e => setUsername(e.target.value)}/> */}
                     {/* <input className="BattleButton" type="button" value="Enter Battle" /> */}
                     <button onClick={handleSubmit} className="enter-auction-btn">
                         <span>🎯 Enter Auction</span>
                     </button>
-
                 </div>
+                <AuctionDisplay />
+                <div>Heloo I am on the right side</div>
             </div>
             <Footer />
 

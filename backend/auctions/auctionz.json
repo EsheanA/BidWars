@@ -1,0 +1,46 @@
+{
+    "auctions":{
+        "mainline_auctions":[
+            {
+                "name": "Garage",
+                "value_range": [0, 250],
+                "items": ["animal", "jewelry", "gem", "vintage_beverage", "collector_coin", "trading_cards", "shoe", "trophy", "condom"],
+                "keywords": [
+                    "Diddy’s Freak Fest",
+                    "Tate’s Alpha Drip",
+                    "Epstein’s Shady Stash",
+                    "Hawk Tuah Hype",
+                    "Barbie’s Bling Binge",
+                    "Skibidi Toilet Sparkle",
+                    "Ye’s Twitter Tantrum",
+                    "Baby Yoda’s Gem",
+                    "Area 51 Swag",
+                    "TikTok Thirst Trap",
+                    "Squid Game Coin",
+                    "Drake’s Hotline Juice",
+                    "Euphoria’s Neon Rager",
+                    "Meme Lord Medal",
+                    "Bussin’ BBL Brew",
+                    "Salt Bae’s Shine",
+                    "Couch Guy Chaos",
+                    "Wanda’s Witchy Sip",
+                    "FOMO Frenzy Card",
+                    "Stranger Things Stash",
+                    "Met Gala Meltdown",
+                    "Dogecoin Fever",
+                    "Vibe Check Victory",
+                    "Cringe TikTok Trophy",
+                    "Nerf Or Nothin’ Nugget",
+                    "Clout Chaser Kicks",
+                    "Sus AF Sapphire",
+                    "Gorilla Glue Glow",
+                    "Ratchet Rave Pack",
+                    "YOLO Yacht Yolo"
+                  ]
+            }
+
+            
+
+        ]
+    }
+}
