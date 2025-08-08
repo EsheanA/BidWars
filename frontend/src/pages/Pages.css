@@ -211,8 +211,8 @@
 .Home .Body {
   /* display: flex; */
   /* border: 2px solid white; */
-  justify-content: center;
-  align-items: center;
+  /* justify-content: center;
+  align-items: center; */
   min-height: 75vh;
   background-color: #0f1112;
   justify-content: flex-start;
@@ -227,11 +227,7 @@
 }
 
 .Body {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  /* display: flex;
-  justify-content: flex-start; */
-  
+  display: flex;
   padding: 0 20px;
 }
 
@@ -285,22 +281,28 @@
 }
 
 /*carousel css */
-
+/* 
 .AuctionDisplay{
-  
-
-
+  flex: 0 0 auto;
   border-top: 2px solid #ffdc73;
   min-width: 50%;
-  width: 100%;
   border-radius: 10px;
   max-width: 100%;
   align-items: center;
   padding: 24px 36px;
   margin-top: auto;
   margin-bottom: auto;
-  transform: scale(0.7);
+  border-top: 2px solid #ffdc73;
+  border-radius: 10px;
+  padding: 24px 36px;
+  margin: auto 0;
 }
+
+.HelloRight{
+  flex: 0 0 40%;
+} */
+
+
 
 .AuctionCard{
   display: flex;
@@ -320,11 +322,35 @@
 
 }
 
+.AuctionDisplay{
+  /* flex: 0 0 auto;             */
+  width: clamp(380px, 60vw, 1000px); /* pick a fixed width if you prefer */
+  /* REMOVE min-width/max-width here */
+  /* border-top: 2px solid #ffdc73; */
+  border-top: 4px solid rgb(255,220,115, 0.5) ;
+  border-radius: 10px;
+  padding: 24px 36px;
+  margin: auto 0;
+  transform: scale(0.8);
+}
+
+/* right column — also fixed/bounded */
+.HelloRight{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height:500px;
+  width: clamp(250px, 35vw, 900px); 
+  background-color: white;
+  background-color: black;
+  border-radius: 10px;
+  margin: auto;
+}
+
 
 .AuctionCard img { 
   border-radius: 7px;
   border: 2px solid #898585;
-
   position: relative;
   width: 90%;
   height: 50%;
@@ -335,9 +361,9 @@
 
 .AuctionDisplay .slick-slider{
   /* min-width: 20vw; */
-  width: 860px;
+  /* width: 860px; */
   align-items: center;
-  box-sizing: border-box;
+  /* box-sizing: border-box; */
   margin: auto;
 }
 
@@ -375,13 +401,13 @@
   font-weight: bold;
   font-size: 28px;
   margin-left: 10px;
-  /* transition: all 0.5s; */
+  transition: all 0.5s;
 }
 .AuctionCard input:hover{
   background-color: #191919;
   background-color: #ffdc73;
-  opacity: 0.8;
-  /* transition: all 0.5s; */
+  opacity: 0.9;
+  transition: all 0.5s;
 }
 
 

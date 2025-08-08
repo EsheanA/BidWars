@@ -70,16 +70,8 @@ function Home() {
         <div className="Home">
             <Nav />
             <div className="Body">
-                <div className="GamePortal" style = {{display: "none"}}>
-                    {/* <input type = "text" /> */}
-                    {/* <input type="text" placeholder='username' className="input input-secondary" value = {username} onChange = {e => setUsername(e.target.value)}/> */}
-                    {/* <input className="BattleButton" type="button" value="Enter Battle" /> */}
-                    <button onClick={handleSubmit} className="enter-auction-btn">
-                        <span>🎯 Enter Auction</span>
-                    </button>
-                </div>
                 <AuctionDisplay />
-                <div>Heloo I am on the right side</div>
+                <div className = "HelloRight">Heloo I am on the right side</div>
             </div>
             <Footer />
 

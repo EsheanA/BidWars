@@ -1,8 +1,8 @@
 {
     "auctions": {
         "$250_auction": {
+            
             "increment": [5,10,20],
-
             "items": {
                 "50%": [
                     {
