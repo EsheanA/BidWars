@@ -8,7 +8,6 @@ const userRouter = require('./routes/userRoutes.js');
 
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
-// const redis = require('redis');
 const cookie = require("cookie");
 require('dotenv').config()
 const mongoose = require('mongoose');
