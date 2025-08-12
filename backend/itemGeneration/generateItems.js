@@ -19,4 +19,6 @@ function generateNumber(max){
     return(max == 100 ? rand+1 : rand);
 }
 
+
+
 module.exports = {generateItems};
