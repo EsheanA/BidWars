@@ -48,24 +48,24 @@ function Home() {
             }
     }
 
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        if (user) {
-            fetch(`${apiURL}`, {
-                method: "POST",
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userid: user?.userid })
-            })
-                .then(() => {
-                    navigate("/BattleRoom");
-                    // console.log("success")
-                })
-                .catch((err) => {
-                    console.warn("Server not reachable, skipping socket connection.");
-                });
-        }
-    }
+    // const handleSubmit = (e) => {
+    //     e.preventDefault()
+    //     if (user) {
+    //         fetch(`${apiURL}`, {
+    //             method: "POST",
+    //             credentials: 'include',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ userid: user?.userid })
+    //         })
+    //             .then(() => {
+    //                 navigate("/BattleRoom");
+    //                 // console.log("success")
+    //             })
+    //             .catch((err) => {
+    //                 console.warn("Server not reachable, skipping socket connection.");
+    //             });
+    //     }
+    // }
     return (
         <div className="Home">
             <Nav />

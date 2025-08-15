@@ -5,7 +5,6 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const RoomGroup = require('./RoomRelated/RoomGroup');
 const userRouter = require('./routes/userRoutes.js');
-
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 const cookie = require("cookie");
@@ -16,9 +15,8 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const Item = require('./models/Item');
 const User = require('./models/User')
-// import { Redis } from '@upstash/redis'
 const { createClient } = require('redis');
-
+const { initSocket } = require("./socket/index.js")
 
 // app.use(express.static(path.join(__dirname, 'public')));
 
@@ -37,21 +35,6 @@ function validateOrigin(origin) {
   return false;
 }
 
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     if (!origin || validateOrigin(origin)) {
-//       return callback(null, true);
-//     }
-//     else
-//       return callback(new Error('Not allowed by CORS'));
-//   },
-//   credentials: true
-// }));
-
-// const corsOpts = {
-//   origin: 'https://bid-wars-ten.vercel.app',
-//   credentials: true,
-// };
 
 const corsOpts = {
   origin: function (origin, callback) {
@@ -69,41 +52,25 @@ app.use(express.json())
 app.use(cookieParser());
 app.use('/users', userRouter);
 
-// app.use(cors({ origin: 'https://bid-wars-ten.vercel.app', credentials: true }));
-// app.options('*', cors({
-//   origin: 'https://bid-wars-ten.vercel.app',
-//   credentials: true
-// }));
-
-       
-// app.options('/*', cors(corsOpts));  
 
 const rooms = new RoomGroup();
-// const redisclient = redis.createClient();
-const redisclient = createClient({
-  url: process.env.REDIS_URL,
-  socket: {
-    tls: true,
-    rejectUnauthorized: false,
-  }
-});
 
-redisclient.on('error', err => console.log('Redis Client Error', err));
+// const redisclient = createClient({
+//   url: process.env.REDIS_URL,
+//   socket: {
+//     tls: true,
+//     rejectUnauthorized: false,
+//   }
+// });
+
+// redisclient.on('error', err => console.log('Redis Client Error', err));
 
 
-app.post('/generateLines', async(req, res) => {
-  try{
-    await createVoicelines(["gold_300", "diamond_200", "airpods_600"])
-    // console.log("pop")
-    res.json({message: "success"})
-  }catch(error){
-    res.status(500).json({error: error})
-  }
-})
 
 
 app.post('/', (req, res) => {
   try {
+    // console.log("wtf")
     const {userid} = req.body
     const token = req.cookies[`token_${userid}`]
     console.log(token)
@@ -116,10 +83,10 @@ app.post('/', (req, res) => {
       res.status(200).send('Server is up');
     }
     else{
+      console.log("Invalid token")
       res.status(401).json({ error: 'Invalid token' });
     }
   } catch (err) {
-    console.log("pppp")
     res.status(401).json({ error: 'Invalid token' });
   }
 });
@@ -177,291 +144,294 @@ async function distributeItems(postgamedata){
 
 
 
-const io = new Server(server, {
-  cors: corsOpts,
-  connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000,
-    skipMiddlewares: false,
-  }
-});
+// const io = new Server(server, {
+//   cors: corsOpts,
+//   connectionStateRecovery: {
+//     maxDisconnectionDuration: 2 * 60 * 1000,
+//     skipMiddlewares: false,
+//   }
+// });
 
 
-io.use((socket, next) => {
-  const { roomToken } = socket.handshake.auth;
-  if (roomToken) {
-    return jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET, (err, session) => {
-      if (err || !rooms.roomExist(session.roomid)) {
-        return next(new Error("Authentication error"))
-      }
-      else{
-        socket.session = session;
-        return next();
-      }
-    });
-  } 
-  else {
-    const rawCookie = socket.handshake.headers.cookie || "";
+// io.use((socket, next) => {
+//   const { roomToken } = socket.handshake.auth;
+//   if (roomToken) {
+//     return jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET, (err, session) => {
+//       if (err || !rooms.roomExist(session.roomid)) {
+//         return next(new Error("Authentication error"))
+//       }
+//       else{
+//         socket.session = session;
+//         return next();
+//       }
+//     });
+//   } 
+//   else {
+//     const rawCookie = socket.handshake.headers.cookie || "";
 
-    const parsedCookies = cookie.parse(rawCookie)
-    const userid  = socket.handshake.auth.userid;
-    const accessToken = parsedCookies[`token_${userid}`]
+//     const parsedCookies = cookie.parse(rawCookie)
+//     const userid  = socket.handshake.auth.userid;
+//     const accessToken = parsedCookies[`token_${userid}`]
     
-    jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-      if (err) {
-        return next(new Error("Authentication error"))
-      }
-      else{
-      // console.log(user)
-        socket.user = user;
-        console.log(user)
-        return next();
-      }
-    });
-  }
-});
+//     jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+//       if (err) {
+//         return next(new Error("Authentication error"))
+//       }
+//       else{
+//       // console.log(user)
+//         socket.user = user;
+//         console.log(user)
+//         return next();
+//       }
+//     });
+//   }
+// });
 
 
-io.on("connection", async (socket) => {
-  let userID;
-  let roomID;
-  let currRoom;
+// io.on("connection", async (socket) => {
+//   let userID;
+//   let roomID;
+//   let currRoom;
 
-  if (socket.session) {
-    const { username, userid, roomid } = socket.session
-    if (roomid) {
-      const user = {
-        userid,
-        username,
-        active: false
-      }
+//   if (socket.session) {
+//     const { username, userid, roomid } = socket.session
+//     if (roomid) {
+//       const user = {
+//         userid,
+//         username,
+//         active: false
+//       }
 
-      userID = user.userid
-      roomID = roomid
-      await rooms.joinPublicCode(user, roomid)
-        .then(({ id, room }) => {
-          room.setUserActiveStatus(false, user.userid, false)
-          socket.join(id);
-          currRoom = room;
-          io.to(socket.id).emit('user data', { id: user.userid, username: user.username })
-
-
-
-          setTimeout(() => {
-            io.to(id).emit('user list', { userlist: room.users })
-          }, "1000");
-
-        })
-        .catch(err => {
-          console.error("Join failed:", err.message);
-          socket.emit("error message", "Room not found or full");
-        });
-    }
-  }
-  else {
-    const { userid, username } = socket.user
-    console.log(username)
-
-    const user = {
-      userid,
-      username,
-      active: true
-    }
-
-    await rooms.joinRoom()
-      .then(async ({ id, room }) => {
-        userID = user.userid
-        roomID = id
-        currRoom = room;
-        socket.join(id);
-        room.join(user)
-
-        const roomToken = generateRoomAccessToken(user, id)
-        io.to(socket.id).emit("room token", { roomToken });
-        setTimeout(() => {
-          console.log(room.users)
-          io.to(id).emit('user list', { userlist: room.users })
-        }, "1000");
-
-        if(room.users.length == 2) {
-          room.postgame = [];
-          handleGameLogic(room)
-        }
-
-      })
-      .catch(err => {
-        console.error("Join failed:", err.message);
-        socket.emit("error message", "Room not found or full");
-      });
-  }
+//       userID = user.userid
+//       roomID = roomid
+//       await rooms.joinPublicCode(user, roomid)
+//         .then(({ id, room }) => {
+//           room.setUserActiveStatus(false, user.userid, false)
+//           socket.join(id);
+//           currRoom = room;
+//           io.to(socket.id).emit('user data', { id: user.userid, username: user.username })
 
 
-  socket.on("disconnect", async() => {
-    console.log("left")
-    rooms.leaveRoom(userID, roomID);
-    if (rooms.roomExist(roomID)) {
-      console.log("room exists")
-      if (!currRoom.in_progress)
-        io.to(roomID).emit('user list', { userlist: currRoom.users })
-    }else{
+
+//           setTimeout(() => {
+//             io.to(id).emit('user list', { userlist: room.users })
+//           }, "1000");
+
+//         })
+//         .catch(err => {
+//           console.error("Join failed:", err.message);
+//           socket.emit("error message", "Room not found or full");
+//         });
+//     }
+//   }
+//   else {
+//     const { userid, username } = socket.user
+//     console.log(username)
+
+//     const user = {
+//       userid,
+//       username,
+//       active: true
+//     }
+
+//     await rooms.joinRoom()
+//       .then(async ({ id, room }) => {
+//         userID = user.userid
+//         roomID = id
+//         currRoom = room;
+//         socket.join(id);
+//         room.join(user)
+
+//         const roomToken = generateRoomAccessToken(user, id)
+//         io.to(socket.id).emit("room token", { roomToken });
+//         setTimeout(() => {
+//           console.log(room.users)
+//           io.to(id).emit('user list', { userlist: room.users })
+//         }, "1000");
+
+//         if(room.users.length == 2) {
+//           room.postgame = [];
+//           handleGameLogic(room)
+//         }
+
+//       })
+//       .catch(err => {
+//         console.error("Join failed:", err.message);
+//         socket.emit("error message", "Room not found or full");
+//       });
+//   }
+
+
+//   socket.on("disconnect", async() => {
+//     console.log("left")
+//     rooms.leaveRoom(userID, roomID);
+//     if (rooms.roomExist(roomID)) {
+//       console.log("room exists")
+//       if (!currRoom.in_progress)
+//         io.to(roomID).emit('user list', { userlist: currRoom.users })
+//     }else{
       
-    }
+//     }
 
-  });
+//   });
 
 
-});
+// });
 
-async function handleGameLogic(room) {
-  try{
+// async function handleGameLogic(room) {
+//   try{
     
-    var items = room.items_for_bid
-    var newitems = []
-    items.forEach((i, index, array) => {
-      // Modify the element at the current index within the original array
-      newitems.push(i.name + "_"+ i.starting_bid)
-    });
-    console.log(newitems)
-    await createVoicelines(newitems)
+//     var items = room.items_for_bid
+//     var newitems = []
+//     items.forEach((i, index, array) => {
+//       // Modify the element at the current index within the original array
+//       newitems.push(i.name + "_"+ i.starting_bid)
+//     });
+//     console.log(newitems)
+//     await createVoicelines(newitems)
     
 
-    const secs = 18;
-    const numofitems = room.items_for_bid.length;
-    if (!room.private) {
-      const handler = ({ user, balance, bid }) => {
-        bidHandle(user, balance, bid, room);
-      };
+//     const secs = 18;
+//     const numofitems = room.items_for_bid.length;
+//     if (!room.private) {
+//       const handler = ({ user, balance, bid }) => {
+//         bidHandle(user, balance, bid, room);
+//       };
 
-      let item_index = -1;
-      io.to(room.id).emit("begin_game", { balance: room.maxBalance, bidOptions: room.bidOptions })
-      const roomdata = {}
-      room.users.forEach((user) => {
-        roomdata[JSON.stringify(user.userid)] = room.maxBalance;
-      })
-      roomdata.highestbid_data = null;
-      roomdata.currentItem = null;
-      roomdata.postgame = [];
-      room.highestbidder = {user: null, bid: null};
-      await redisclient.set(JSON.stringify(room.id), JSON.stringify(roomdata)) 
-      console.log("game begin")
-      room.in_progress = true;
+//       let item_index = -1;
+//       io.to(room.id).emit("begin_game", { balance: room.maxBalance, bidOptions: room.bidOptions })
+//       const roomdata = {}
+//       room.users.forEach((user) => {
+//         roomdata[JSON.stringify(user.userid)] = room.maxBalance;
+//       })
+//       roomdata.highestbid_data = null;
+//       roomdata.currentItem = null;
+//       roomdata.postgame = [];
+//       room.highestbidder = {user: null, bid: null};
+//       await redisclient.set(JSON.stringify(room.id), JSON.stringify(roomdata)) 
+//       console.log("game begin")
+//       room.in_progress = true;
 
-      let round = async () => {
-        const sockets = await io.in(room.id).fetchSockets()
-        item_index += 1;
+//       let round = async () => {
+//         const sockets = await io.in(room.id).fetchSockets()
+//         item_index += 1;
 
-        //assign won item to top bidder
-        if (item_index > 0) {
-          let data = await redisclient.get(JSON.stringify(room.id))
-          data = JSON.parse(data)
-          if (data.highestbid_data) {
-            const { user, bid } = data.highestbid_data;
+//         //assign won item to top bidder
+//         if (item_index > 0) {
+//           let data = await redisclient.get(JSON.stringify(room.id))
+//           data = JSON.parse(data)
+//           if (data.highestbid_data) {
+//             const { user, bid } = data.highestbid_data;
 
-            if (user) {
-              let originalBal = data[JSON.stringify(user.userid)];
-              data[JSON.stringify(user.userid)] = originalBal - bid;
+//             if (user) {
+//               let originalBal = data[JSON.stringify(user.userid)];
+//               data[JSON.stringify(user.userid)] = originalBal - bid;
               
-              data.postgame.push({ user, item: data.currentItem, bid })
+//               data.postgame.push({ user, item: data.currentItem, bid })
 
-              room.postgame.push({ user, item: data.currentItem, bid })
-              io.to(room.id).emit("updated_balance", { userid: user.userid, balance: data[JSON.stringify(user.userid)] })
-              data.highestbid_data = null;
+//               room.postgame.push({ user, item: data.currentItem, bid })
+//               io.to(room.id).emit("updated_balance", { userid: user.userid, balance: data[JSON.stringify(user.userid)] })
+//               data.highestbid_data = null;
 
 
-              updateRedisData(room.id, data)
-            }
+//               updateRedisData(room.id, data)
+//             }
             
             
-          }
-        }
+//           }
+//         }
 
-        if (item_index >= room.items_for_bid.length) {
+//         if (item_index >= room.items_for_bid.length) {
 
-          let data = await redisclient.get(JSON.stringify(room.id));
-          if(data){
-            data = JSON.parse(data);
-            console.log(data.postgame)
-            distributeItems(data.postgame)
-          }
+//           let data = await redisclient.get(JSON.stringify(room.id));
+//           if(data){
+//             data = JSON.parse(data);
+//             console.log(data.postgame)
+//             distributeItems(data.postgame)
+//           }
       
-          room.game_over = true;
-          io.in(room.id).disconnectSockets();
-          io.in(room.id).socketsLeave(room.id);
-          console.log("game over")
-          await redisclient.del(JSON.stringify(room.id))
-        }
-        else {
-          let item = room.items_for_bid[item_index]
+//           room.game_over = true;
+//           io.in(room.id).disconnectSockets();
+//           io.in(room.id).socketsLeave(room.id);
+//           console.log("game over")
+//           await redisclient.del(JSON.stringify(room.id))
+//         }
+//         else {
+//           let item = room.items_for_bid[item_index]
           
-          let roomdata = await redisclient.get(JSON.stringify(room.id))
+//           let roomdata = await redisclient.get(JSON.stringify(room.id))
 
-          roomdata = JSON.parse(roomdata);
-          roomdata.currentItem = item;
-          updateRedisData(room.id, roomdata)
+//           roomdata = JSON.parse(roomdata);
+//           roomdata.currentItem = item;
+//           updateRedisData(room.id, roomdata)
 
-          room.highestbidder = { user: null, bid: item.starting_bid }
-          io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: "" });
-          itemBid(room, item, sockets, handler, secs)
+//           room.highestbidder = { user: null, bid: item.starting_bid }
+//           io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: "" });
+//           itemBid(room, item, sockets, handler, secs)
 
-        }
-      };
-      round()
-      const interval = setInterval(round, secs * 1000)
-      setTimeout(() => {
-        clearInterval(interval);
-      }, secs * 1000 * numofitems + 20);
+//         }
+//       };
+//       round()
+//       const interval = setInterval(round, secs * 1000)
+//       setTimeout(() => {
+//         clearInterval(interval);
+//       }, secs * 1000 * numofitems + 20);
 
-  }
-  }catch(error){
+//   }
+//   }catch(error){
 
-  }
-}
+//   }
+// }
 
-function itemBid(room, item, sockets, handler, secs) {
-  room.setUserActiveStatus(true, 0, true);
-  io.to(room.id).emit('user list', { userlist: room.users })
+// function itemBid(room, item, sockets, handler, secs) {
+//   room.setUserActiveStatus(true, 0, true);
+//   io.to(room.id).emit('user list', { userlist: room.users })
 
-  io.to(room.id).emit("setItem", { item, timer: secs-3 })
-  for (let i = 0; i < sockets.length; i++) {
-    sockets[i].off("bid", handler)
-    sockets[i].on("bid", handler)
-  }
-}
+//   io.to(room.id).emit("setItem", { item, timer: secs-3 })
+//   for (let i = 0; i < sockets.length; i++) {
+//     sockets[i].off("bid", handler)
+//     sockets[i].on("bid", handler)
+//   }
+// }
 
 
 
-const bidHandle = async (user, balance, bid, room) => {
-  if (!(bid > balance) && (!room.highestbidder.user || user.userid != room.highestbidder.user.userid)) {
-    if (room.getUserActiveStatus(user.userid)) {
-      let data = await redisclient.get(JSON.stringify(room.id));
-      data = JSON.parse(data);
-      data.highestbid_data = { bid, user };
-      updateRedisData(room.id, data)
-      room.highestbidder.user = user;
-      room.highestbidder.bid = bid;
-      io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: `I bid $${bid}, skibidi` });
-    }
-  }
-}
+// const bidHandle = async (user, balance, bid, room) => {
+//   if (!(bid > balance) && (!room.highestbidder.user || user.userid != room.highestbidder.user.userid)) {
+//     if (room.getUserActiveStatus(user.userid)) {
+//       let data = await redisclient.get(JSON.stringify(room.id));
+//       data = JSON.parse(data);
+//       data.highestbid_data = { bid, user };
+//       updateRedisData(room.id, data)
+//       room.highestbidder.user = user;
+//       room.highestbidder.bid = bid;
+//       io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: `I bid $${bid}, skibidi` });
+//     }
+//   }
+// }
 
-async function updateRedisData(roomid, data) {
-  try {
-    await redisclient.set(JSON.stringify(roomid), JSON.stringify(data));
-  } catch (error) {
-    console.log(error)
-  }
-}
+// async function updateRedisData(roomid, data) {
+//   try {
+//     await redisclient.set(JSON.stringify(roomid), JSON.stringify(data));
+//   } catch (error) {
+//     console.log(error)
+//   }
+// }
 
 
 async function startServer() {
   try {
-    await redisclient.connect();
-    console.log('Connected to Redis');
+    // await redisclient.connect();
+    // console.log('Connected to Redis');
 
     await mongoose.connect(process.env.MONGODB_URI)
     console.log("Connected to MongoDB Atlas")
+
     server.listen(3000, () => {
       console.log(`Server is running on port 3000`);
     });
+
+    await initSocket(server, corsOpts) 
 
 
   } catch (err) {

@@ -13,6 +13,16 @@ function generateItems(auction){
     }
     return(items)
 } 
+function generateItem(auction){
+    const auction_items = auctionData.auctions[auction].items
+    let number = generateNumber(100);
+    number = (number <= 50 ? 50 : (number <= 85 ? 35 : (number <= 99 ? 14 : 1)))
+    const key = `${number}%`;
+    const value = auction_items[key]
+    number = generateNumber(value.length)
+    const item = value[number];
+    return(item)
+} 
 
 function generateNumber(max){
     const rand = Math.floor(Math.random() * max);
@@ -21,4 +31,4 @@ function generateNumber(max){
 
 
 
-module.exports = {generateItems};
+module.exports = {generateItems, generateItem};

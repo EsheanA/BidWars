@@ -4,7 +4,7 @@ const { z } = require("zod");
 const {createWriteStream} = require("fs")
 const {Readable} = require("stream");
 const {finished} = require("stream/promises")
-const {exec} = require("child_process")
+// const {exec} = require("child_process")
 const auctionData = require('./auctions/auctionz.json')
 require('dotenv').config();
 
