@@ -1,6 +1,7 @@
 const { createClient } = require("redis")
-const { generateItem } = require("../itemGeneration/generateItems.js")
-const Room = require("./Room.js")
+const Room = require("./Room.js");
+const { callGrok } = require("../itemGeneration/grok.js");
+const auctionData = require('../auctions/auctionz.json')
 require('dotenv').config();
 
 
@@ -15,8 +16,10 @@ class RoomHandler {
                 }
             });
 
-            this.client.on('connect', () => {
+            this.client.on('connect', async() => {
                 console.log('RedisRoomHandler connected to Redis');
+                await this.client.flushDb(); 
+                console.log('Redis database cleared successfully.');
             });
 
             this.client.on('error', (err) => {
@@ -42,6 +45,22 @@ class RoomHandler {
         }
     }
 
+    //checks if a user exists in a room
+    async userExist(userid){
+        try{
+            const user = await this.client.get(`user:${userid}`)
+            if(user == null){
+                return false
+            }
+            else{
+                return true;
+            }
+        }catch(error){
+            console.error("Error getting user info: ", error);
+            return Promise.reject(null);
+        }
+    }
+
     async initClient() {
         try {
             await this.client.connect();
@@ -57,7 +76,7 @@ class RoomHandler {
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
             const userid = parsedRoom.itemData.bidder_id;
-            if(userid){
+            if(userid != null){
                 const user = await this.client.get(`user:${userid}`)
                 const parsedUser = JSON.parse(user)
                 const currentItem = parsedRoom.itemData
@@ -91,17 +110,19 @@ class RoomHandler {
                 return Promise.resolve({userid: null, bid})
             }
 
-            
-            
-
         }catch(error){
             console.error("Error handling user bid: ", error)
             return Promise.reject("Error handling user bid: ", error);
         }
     }
 
-    async findRoom(userid, username, auctionName) {
+    async findRoom(userid, username, auctionIndex) {
         try {
+            const auctionName = auctionData.auctions.mainline_auctions[auctionIndex].name;
+            const getMaxBalance = () => {
+                return(auctionData.auctions.mainline_auctions[auctionIndex].value_range[1])
+            }
+            const max_balance = getMaxBalance()
             const validRoomID = await this.client.lPop(`rooms:${auctionName}`);
             if (validRoomID) {
                 const room = await this.client.get(`room:${validRoomID}`);
@@ -109,16 +130,14 @@ class RoomHandler {
                 //first check if room is full or in progress
                 if (parsedRoom.max || parsedRoom.in_progress) {
                     await this.client.lPush(`rooms:${auctionName}`, JSON.stringify(parsedRoom));
-                    const room = new Room(auctionName);
+                    const room = new Room(auctionName, auctionIndex);
                     room.users.push({ userid, username, active: true });
                     //setting key to room via its id && also pushing roomid to queue
                     await this.client.set(`room:${room.id}`, JSON.stringify(room));
                     await this.client.lPush(`rooms:${auctionName}`, room.id);
                     //giving user a reference to the roomid
-                    await this.client.set(`user:${userid}`, JSON.stringify({ roomid: room.id, username, active: true, balance: 250}));
-    
+                    await this.client.set(`user:${userid}`, JSON.stringify({ roomid: room.id, username, active: true, balance: max_balance, items: []}));
                     return Promise.resolve(room.id);
-
                 } 
                 //otherwise just add user to the room at the top of queue
                 else {
@@ -126,7 +145,7 @@ class RoomHandler {
                     if (parsedRoom.limit == parsedRoom.users.length)
                         parsedRoom.max = true;
                     await this.client.set(`room:${parsedRoom.id}`, JSON.stringify(parsedRoom))
-                    await this.client.set(`user:${userid}`, JSON.stringify({ roomid: parsedRoom.id, username, active: true, balance: 250}));
+                    await this.client.set(`user:${userid}`, JSON.stringify({ roomid: parsedRoom.id, username, active: true, balance: max_balance, items: []}));
                     await this.client.lPush(`rooms:${auctionName}`, parsedRoom.id);
                     return Promise.resolve(parsedRoom.id);
                 }
@@ -134,14 +153,14 @@ class RoomHandler {
             //if the queue is empty create a new room
             else {
                 
-                const room = new Room();
+                const room = new Room(auctionName, auctionIndex);
+                console.log(room)
                 room.users.push({ userid, username, active: true });
-                console.log(room.users)
                 //setting key to room via its id && also pushing roomid to queue
                 await this.client.set(`room:${room.id}`, JSON.stringify(room));
                 await this.client.lPush(`rooms:${auctionName}`, room.id);
                 //giving user a reference to the roomid
-                await this.client.set(`user:${userid}`, JSON.stringify({ roomid: room.id, username, active: true, balance: 250 }));
+                await this.client.set(`user:${userid}`, JSON.stringify({ roomid: room.id, username, active: true, balance: max_balance, items: []}));
 
                 return Promise.resolve(room.id);
             }
@@ -155,18 +174,37 @@ class RoomHandler {
 
     async kickUser(userid) {
         try {
-            const roomid = await this.client.get(`user:${userid}`);
+            const userData = await this.client.get(`user:${userid}`);
+            const roomid = JSON.parse(userData).roomid;
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
-
             parsedRoom.users = parsedRoom.users.filter(kickuser => kickuser.userid != userid);
-
-            await this.client.del(`user:${userid}`);
+            await this.client.del([`user:${userid}`]);
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
-
+            console.log("User was kicked")
             return Promise.resolve();
+
+
         } catch (error) {
             console.error("Error kicking user: ", error);
+            return Promise.reject(error);
+        }
+    }
+    async toggleUsersActiveStatus(roomid){
+        try {
+            const room = await this.client.get(`room:${roomid}`);
+            const parsedRoom = JSON.parse(room);
+            parsedRoom.users.forEach(async(u, index, arr) => {
+              const user = await this.client.get(`user:${u.userid}`);
+              const parsedUser = JSON.parse(user);
+              if(parsedUser.active)
+                arr[index].active = true;
+              console.log(arr[index].active)
+            })
+            await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
+            return Promise.resolve({users: JSON.stringify(parsedRoom.users)});
+        } catch (error) {
+            console.error("Error in setting active status of users in the room: ", error);
             return Promise.reject(error);
         }
     }
@@ -176,7 +214,7 @@ class RoomHandler {
             const user = await this.client.get(`user:${userid}`);
             const parsedUser = JSON.parse(user);
             parsedUser.active = !parsedUser.active;
-            const room = await this.client.get(parsedUser.roomid);
+            const room = await this.client.get(`room:${parsedUser.roomid}`);
 
             if (!parsedUser.active) {
                 const parsedRoom = JSON.parse(room);
@@ -248,31 +286,61 @@ class RoomHandler {
             return Promise.reject(error);
         }
     }
+
     async getPreGameData(roomid) {
         try {
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
 
-            const firstItem = generateItem(parsedRoom.auction)
-            const { name, value, url, starting_bid } = firstItem;
-            room.itemData.item = { name, value, url }
-            room.itemData.bid = starting_bid;
+            const data = await callGrok(parsedRoom.auctionIndex)
+            const parsedData = JSON.parse(data)
+            const {item, category, audio_url, img_url} = parsedData
+
+            const { item_name, item_value, starting_bid, item_guessing_range, item_description } = item;
+            parsedRoom.itemData = {name: item_name, value: item_value, bid: starting_bid, range: item_guessing_range, description: item_description, audio_url, img_url, bidder_id: null}
+
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
-            return ({ rounds: parsedRoom.rounds, item: firstItem, maxBalance: 250});
+            const getMaxBalance = () => {
+                return(auctionData.auctions.mainline_auctions[parsedRoom.auctionIndex].value_range[1])
+            }
+
+            const max_balance = getMaxBalance();
+            return Promise.resolve(JSON.stringify({ rounds: parsedRoom.rounds, item_data: parsedRoom.itemData, category, max_balance, bid_options: parsedRoom.bid_options}));
+            // return Promise.resolve()
 
         } catch (error) {
             console.error("Error getting pregame data: ", error)
         }
     }
 
+    async setItem(roomid){
+        try{
+            const room = await this.client.get(`room:${roomid}`);
+            const parsedRoom = JSON.parse(room);
+            const data = await callGrok(parsedRoom.auctionIndex);
+            const parsedData = JSON.parse(data);
+            const {item, category, audio_url, img_url} = parsedData;
+            const { item_name, item_value, starting_bid, item_guessing_range, item_description } = item;
+            parsedRoom.itemData = {name: item_name, value: item_value, bid: starting_bid, range: item_guessing_range, description: item_description, audio_url, img_url, bidder_id: null}
+            await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
+            return Promise.resolve(JSON.stringify({item_data: parsedRoom.itemData, category}))
+
+        }catch(error){
+            console.error("Error setting next item: ", roomid);
+            throw error;
+        }
+    }
+    
+
     async checkGameStarted(roomid) {
         try {
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
-            return Promise.resolve(parsedRoom.in_progress);
+            return parsedRoom.in_progress;
+
         } catch (error) {
             console.error("Error checking if game started: ", error);
-            return Promise.reject(error);
+            throw error;
         }
     }
     async startGame(roomid) {
@@ -287,6 +355,8 @@ class RoomHandler {
         }
     }
 }
+
+
 const redisRoomHandler = new RoomHandler();
 // Exporting the singleton instance
 module.exports = redisRoomHandler;

@@ -10,8 +10,8 @@ function Avatar({name, self, bidOptions, makeBid, highestBidder, user, active}) 
     })
     return (
       <>
-        <div className = "Avatar" style={{ border: self ? "4px solid gold" : "2px solid black" , backgroundColor: active ? (highestBidder?.user?.userid == user.userid ? "white" : "#272727") : "red"}}>
-          {highestBidder?.user?.userid == user.userid ? <Chatbubble message = {highestBidder.message} heightValue = {25}/> : <div/>}
+        <div className = "Avatar" style={{ border: self ? "4px solid gold" : "2px solid black" , backgroundColor: active ? (highestBidder?.userid == user.userid ? "white" : "#272727") : "red"}}>
+          {highestBidder?.userid == user.userid ? <Chatbubble message = {highestBidder.message} heightValue = {25}/> : <div/>}
           <img src = "/images/user2.png" width="150" height="150"/>
           <div className = "centered">{name}</div>
           <div className = "bidButtons">

@@ -9,18 +9,7 @@ import {useNavigate} from "react-router-dom"
 
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
-// dotenv.config();
-// const data = [
-//     {
-//         name: "car.png",
-//         height: "200",
-//         width: "300"
-//     },
-//     {
-//         name: "goldtoilet.png",
-//         height: "200",
-//         width: "160"
-//     },
+
 
 function BattleRoom(){
         const navigate = useNavigate();
@@ -74,21 +63,25 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", data => {
-    
-            setItemForBid(data.item)
-            setHighestBid(data.item.starting_bid)
-            setHighestBidder(null)
-            setTimer(data.timer)
+            const parsedData = JSON.parse(data);
+            console.log(parsedData)
+            const {name, value, description, bid, audio_url, img_url} = parsedData.item
 
-            setAnnouncement(data.item.name)
-            playAudio(data.item.name+"_"+data.item.starting_bid + ".mp3")
+            setItemForBid({name, value, description, img_url, audio_url})
+            setHighestBid(bid)
+            setHighestBidder(null)
+
+            setTimer(data.timer)
+            
+            // setAnnouncement(name)
+            // playAudio(audio_url)
             
         })
         socket.current.on("current bid", data => {
             if(data){
-                console.log(data.highestBidder)
-                setHighestBidder({user: data.highestBidder.user, message: data.bidmessage})
-                setHighestBid(data.highestBidder.bid)
+                console.log(data)
+                setHighestBidder({userid: data.bidder_id, message: data.bidmessage})
+                setHighestBid(data.bid)
             }
         })
         socket.current.on("begin_game", (data)=> {
@@ -107,13 +100,12 @@ function BattleRoom(){
         return() =>{
             socket.current.disconnect()
             console.log("Socket disconnected")
-            
         }
 
     }, []);
 
     const playAudio = (filename) => {
-        const audio = new Audio(`http://localhost:3000/audio/${filename}`);
+        const audio = new Audio(`http://localhost:3000/${filename}`);
         audio.play().catch((err) => {
             console.error('Error playing audio:', err);
         });
@@ -152,9 +144,9 @@ function BattleRoom(){
 
     const makeBid = (val, player) =>{
         console.log("pop")
-        if(itemForBid){
-            socket.current.emit("bid", {user: player, balance, bid: highestBid+val})
-        }
+        // if(itemForBid){
+        //     socket.current.emit("bid", {user: player, balance, bid: highestBid+val})
+        // }
     }
 
     const renderUsers = users?.map((u) => {

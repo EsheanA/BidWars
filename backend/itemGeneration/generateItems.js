@@ -13,6 +13,7 @@ function generateItems(auction){
     }
     return(items)
 } 
+
 function generateItem(auction){
     const auction_items = auctionData.auctions[auction].items
     let number = generateNumber(100);
@@ -23,6 +24,8 @@ function generateItem(auction){
     const item = value[number];
     return(item)
 } 
+
+
 
 function generateNumber(max){
     const rand = Math.floor(Math.random() * max);

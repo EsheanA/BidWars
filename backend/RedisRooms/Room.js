@@ -1,18 +1,34 @@
 const { v4: uuidv4 } = require("uuid");
+const auctionData = require("../auctions/auctionz.json")
 const {generateItems} = require('../itemGeneration/generateItems')
 
 class Room{
 
-    constructor(auction){
+    constructor(auctionName, auctionIndex){
         this.id = uuidv4()
         this.users = [];
-        this.auction = auction;
-        this.limit = 4;
+        this.auctionIndex = auctionIndex;
+        this.auction = auctionName;
+        this.limit = 2;
         this.items = [];
+        this.bid_options = this.setBidOptions(auctionIndex);
         this.rounds = 3;
         this.in_progress = false;
         this.max = false
-        this.itemData = {item: null, bidder_id: null, bid: null}
+        this.itemData = {
+            name: null, 
+            value: null, 
+            bid: null, 
+            range: null, 
+            description: null, 
+            bidder_id: null,
+            img_url: null,
+            audio_url: null
+        }
+    }
+    
+    setBidOptions(auctionIndex){
+        return(auctionData.auctions.mainline_auctions[auctionIndex].bid_options)
     }
 
    

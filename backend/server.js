@@ -25,7 +25,7 @@ const {createVoicelines} = require('./ollama/child.js')
 app.use('/audio', express.static(path.join(__dirname, 'audioFiles')));
 
 // app.use('/images', express.static(path.join(__dirname, 'images')));
-app.use('/items', express.static(path.join(__dirname, 'items')));
+app.use('/BidWarsSVGs', express.static(path.join(__dirname, 'BidWarsSVGs')));
 
 function validateOrigin(origin) {
   const originSlice = origin.slice(0, 17)

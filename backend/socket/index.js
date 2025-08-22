@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { socketAuth } = require('./auth');
 require('dotenv').config();
+const {handleGameLogic} = require("./GameLogic.js")
 const redisRoomHandler = require("../RedisRooms/RoomHandler.js")
 const jwt = require('jsonwebtoken');
 // Optional: Redis adapter if you scale horizontally
@@ -38,28 +39,32 @@ async function initSocket(server, corsOpts) {
         let roomID;
         try{
             if(socket.session) {
-                const {userid} = socket.user;
+                const {userid, roomid} = socket.session;
+                userID = userid;
+                roomID = roomid;
                 const user = await redisRoomHandler.getUser(userid);
+                socket.join(roomid)
                 if(user != null){
                     await redisRoomHandler.toggleUserActiveStatus(userid)
                 }
             }
             else {
                 const { userid, username } = socket.user
-                const auctionName = socket.auctionName
+                // const auctionName = socket.auctionName
                 userID = userid;
-                const roomid = await redisRoomHandler.findRoom(userid, username, auctionName);
+                const roomid = await redisRoomHandler.findRoom(userid, username, 0);
                 roomID = roomid;
 
                 socket.join(roomid)
                 const roomToken = generateRoomAccessToken({userid, username}, roomid)
                 io.to(socket.id).emit("room token", { roomToken });
                 const users = await redisRoomHandler.getUsers(roomid)
-                console.log("users: "+ users)
+                console.log("users: " + users)
                 io.to(roomid).emit('user list', { userlist: users })
-                // if(await redisRoomHandler.checkWhetherFull(roomid)){
-                //     handleGameLogic(roomid)
-                // }
+                if(await redisRoomHandler.checkWhetherFull(roomid)){
+                    console.log("Begin Game!")
+                    handleGameLogic(io, roomid)
+                }
             }
         }catch(error){
             console.error("Join failed:", error.message);
@@ -69,11 +74,11 @@ async function initSocket(server, corsOpts) {
             console.log("left")
             if(await redisRoomHandler.checkGameStarted(roomID))
                 await redisRoomHandler.toggleUserActiveStatus(userID)
-            else
+            else{
                 await redisRoomHandler.kickUser(userID)
-            const users = await redisRoomHandler.getUsers(roomid)
-            io.to(roomID).emit('user list', { userlist: users })
-
+            }
+            const users = await redisRoomHandler.getUsers(roomID)
+            await io.to(roomID).emit('user list', { userlist: users })
         }); 
     });
     return io;
