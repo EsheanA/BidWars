@@ -194,13 +194,19 @@ class RoomHandler {
         try {
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
+            // console.log("__________")
             parsedRoom.users.forEach(async(u, index, arr) => {
               const user = await this.client.get(`user:${u.userid}`);
               const parsedUser = JSON.parse(user);
-              if(parsedUser.active)
+            //   console.log(parsedUser)
+            //   console.log("- - - - - - - -")
+            //   console.log(arr[index])
+              if(parsedUser.active){
                 arr[index].active = true;
+              }
               console.log(arr[index].active)
             })
+            // console.log("__________")
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
             return Promise.resolve({users: JSON.stringify(parsedRoom.users)});
         } catch (error) {

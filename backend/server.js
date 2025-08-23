@@ -22,11 +22,11 @@ const { initSocket } = require("./socket/index.js")
 
 const path = require('path');
 const {createVoicelines} = require('./ollama/child.js')
-app.use('/audio', express.static(path.join(__dirname, 'audioFiles')));
+app.use('/audioFiles', express.static(path.join(__dirname, 'audioFiles')));
 
 // app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/BidWarsSVGs', express.static(path.join(__dirname, 'BidWarsSVGs')));
-
+app.use('/GoldSVGs', express.static(path.join(__dirname, 'GoldSVGs')));
 function validateOrigin(origin) {
   const originSlice = origin.slice(0, 17)
   if (originSlice === "http://localhost:") {
@@ -53,7 +53,7 @@ app.use(cookieParser());
 app.use('/users', userRouter);
 
 
-const rooms = new RoomGroup();
+// const rooms = new RoomGroup();
 
 // const redisclient = createClient({
 //   url: process.env.REDIS_URL,

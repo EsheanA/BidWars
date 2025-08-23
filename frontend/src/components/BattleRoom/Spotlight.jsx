@@ -50,7 +50,7 @@ function Spotlight({item, announcement, highestBid}) {
         <div className = "Spotlight" style={{ display: visible ? "flex" : "none" }}>
             <img ref={imgRef} src = {`/${apiURL}/` + item?.img_url} style = {{display: "none"}}/>
             <img className = "Spotlight-img" src = "/images/spotlight.jpg"/>
-            {item ? <img className = "itemForBid"  src = {`${apiURL}/` + item?.img_url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/>: <span/>}
+            {item ? <img className = "itemForBid"  src = {`${apiURL}/GoldSVGs/` + item?.img_url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/>: <span/>}
 
             {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>}
         </div>

@@ -2,7 +2,7 @@ const redisRoomHandler = require("../RedisRooms/RoomHandler");
 
 
 
-async function itemBid(roomid, item, io, sockets, handler, secs) {
+async function itemBid(roomid, item, io, sockets, handler, secs, start) {
   try{
     console.log("roomid: ", roomid)
     console.log("item: ", item)
@@ -10,8 +10,16 @@ async function itemBid(roomid, item, io, sockets, handler, secs) {
     const parsed_users = JSON.parse(users)
 
     io.to(roomid).emit('user list', { userlist: parsed_users })
+    const end = Date.now()
+    const timeBetween = end-start;
+    console.log(timeBetween)
+    // if(interval){
+    //   setTimeout(() => {
+    //     interval
+    //   }, timeIncrease);
+    // }
 
-    io.to(roomid).emit("setItem", JSON.stringify({ item, timer: secs - 3 }))
+    io.to(roomid).emit("setItem", JSON.stringify({ item, timer: secs-15}))
 
     for (let i = 0; i < sockets.length; i++) {
       sockets[i].off("bid", handler)
@@ -28,7 +36,8 @@ async function handleGameLogic(io, roomid) {
 
     const pregame_data = await redisRoomHandler.getPreGameData(roomid);
     const { rounds, max_balance, item_data, category, bid_options} = JSON.parse(pregame_data);
-    const secs = 18;
+    var new_item = item_data;
+    const secs = 30;
     console.log(`rounds: ${rounds}, max_balance: $${max_balance}, bid_options: ${bid_options}, category: ${category}`,);
 
     const handler = ({ user, bid }) => {
@@ -44,8 +53,8 @@ async function handleGameLogic(io, roomid) {
 
     const sockets = await io.in(roomid).fetchSockets();
 
-
     let round = async() => {
+      const start = Date.now()
       if(current_round != rounds) {
         await redisRoomHandler.awardItem(roomid);
       }
@@ -53,33 +62,37 @@ async function handleGameLogic(io, roomid) {
         console.log("game over")
         io.in(roomid).disconnectSockets();
         io.socketsLeave(roomid);
+
+      }else{
+        var parsed_item_data = new_item;
+
+        if(current_round != rounds){ //here we say: if we aren't on the first round
+          new_item = await redisRoomHandler.setItem(roomid);
+          parsed_item_data = JSON.parse(new_item).item_data
+        }
+
+        const {name, value, bid, range, description, audio_url, img_url, bidder_id} = parsed_item_data;
+        const item = {name, value, bid, description, audio_url, img_url, category: parsed_item_data.category};
+
+        await itemBid(roomid, item, io, sockets, handler, secs, start)
+        current_round-=1;
       }
-      const parsed_item_data = item_data;
-      // console.log(parsed_item_data)
-      if(current_round != rounds){ //here we say: if we aren't on the first round
-        item_data = await redisRoomHandler.setItem(roomid);
-        parsed_item_data = JSON.parse(item_data)
-      }
-
-      const {name, value, bid, range, description, audio_url, img_url, bidder_id} = parsed_item_data;
-      const item = {name, value, bid, description, audio_url, img_url}
-
-      // io.to(roomid).emit("current bid", { bidder_id: bidder_id, bidmessage: "", bid: bid});
-
-      console.log("test")
-      await itemBid(roomid, item, io, sockets, handler, secs)
-
-      current_round-=1;
+      
 
     }
     round()
-    // const interval = setInterval(round, secs * 1000)
-
+    // interval = setInterval(await round, secs * 1000)
+    const interval = setInterval(async () => {
+      console.log(`Round ${current_round}`)
+      await round();
+    }, secs * 1000);
     // setTimeout(() => {
     //   clearInterval(interval);
-    // }, (secs * 1000 * rounds) + 20);
-      
-    
+    // }, ((secs * 1000*3) + 100));
+    setTimeout(() => {
+      clearInterval(interval);
+    }, 140*1000);
+
   //   let round = async () => {
 
   //     const sockets = await io.in(room.id).fetchSockets()
@@ -148,6 +161,11 @@ async function handleGameLogic(io, roomid) {
 
   }
   
+}
+function timer(secs, interval){
+  setTimeout(() => {
+    clearInterval(interval);
+  }, ((secs * 1000*3) + 100));
 }
 
 // function itemBid(room, item, sockets, handler, secs) {

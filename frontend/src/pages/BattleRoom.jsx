@@ -71,10 +71,10 @@ function BattleRoom(){
             setHighestBid(bid)
             setHighestBidder(null)
 
-            setTimer(data.timer)
+            setTimer(parsedData.timer)
             
-            // setAnnouncement(name)
-            // playAudio(audio_url)
+            setAnnouncement(name)
+            playAudio(audio_url)
             
         })
         socket.current.on("current bid", data => {
@@ -155,14 +155,14 @@ function BattleRoom(){
         )
     })
     return(
-        <>
+        <div className = "BattleRoom">
             <div className = "Balance">Balance: ${balance}  {timer? ` Time Left: ${timer}`: ""}</div>
             <Spotlight item = {itemForBid} announcement = {announcement} highestBid = {highestBid}/>
 
             <div className = "AvatarSpread">
                 {renderUsers}
             </div>
-        </>
+        </div>
     )
 }
 
