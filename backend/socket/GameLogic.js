@@ -2,24 +2,23 @@ const redisRoomHandler = require("../RedisRooms/RoomHandler");
 
 
 
-async function itemBid(roomid, item, io, sockets, handler, secs, start) {
+async function itemBid(roomid, item, io, sockets, handler, round, secs, start, interval) {
   try{
+
     console.log("roomid: ", roomid)
     console.log("item: ", item)
     const {users} = await redisRoomHandler.toggleUsersActiveStatus(roomid)
     const parsed_users = JSON.parse(users)
 
+    console.log("interval: ", interval)
+
     io.to(roomid).emit('user list', { userlist: parsed_users })
     const end = Date.now()
     const timeBetween = end-start;
     console.log(timeBetween)
-    // if(interval){
-    //   setTimeout(() => {
-    //     interval
-    //   }, timeIncrease);
-    // }
 
-    io.to(roomid).emit("setItem", JSON.stringify({ item, timer: secs-15}))
+    await increaseTimer(round, interval, secs)
+    io.to(roomid).emit("setItem", JSON.stringify({ item, timer: secs}))
 
     for (let i = 0; i < sockets.length; i++) {
       sockets[i].off("bid", handler)
@@ -37,7 +36,7 @@ async function handleGameLogic(io, roomid) {
     const pregame_data = await redisRoomHandler.getPreGameData(roomid);
     const { rounds, max_balance, item_data, category, bid_options} = JSON.parse(pregame_data);
     var new_item = item_data;
-    const secs = 30;
+    const secs = 20;
     console.log(`rounds: ${rounds}, max_balance: $${max_balance}, bid_options: ${bid_options}, category: ${category}`,);
 
     const handler = ({ user, bid }) => {
@@ -53,7 +52,7 @@ async function handleGameLogic(io, roomid) {
 
     const sockets = await io.in(roomid).fetchSockets();
 
-    let round = async() => {
+    let round = async(interval) => {
       const start = Date.now()
       if(current_round != rounds) {
         await redisRoomHandler.awardItem(roomid);
@@ -62,7 +61,7 @@ async function handleGameLogic(io, roomid) {
         console.log("game over")
         io.in(roomid).disconnectSockets();
         io.socketsLeave(roomid);
-
+        clearInterval(interval)
       }else{
         var parsed_item_data = new_item;
 
@@ -74,99 +73,38 @@ async function handleGameLogic(io, roomid) {
         const {name, value, bid, range, description, audio_url, img_url, bidder_id} = parsed_item_data;
         const item = {name, value, bid, description, audio_url, img_url, category: parsed_item_data.category};
 
-        await itemBid(roomid, item, io, sockets, handler, secs, start)
+        await itemBid(roomid, item, io, sockets, handler, round, secs, start, interval)
         current_round-=1;
       }
       
 
     }
-    round()
-    // interval = setInterval(await round, secs * 1000)
-    const interval = setInterval(async () => {
-      console.log(`Round ${current_round}`)
-      await round();
-    }, secs * 1000);
+   await startTimer(round, secs)
+
     // setTimeout(() => {
     //   clearInterval(interval);
-    // }, ((secs * 1000*3) + 100));
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 140*1000);
-
-  //   let round = async () => {
-
-  //     const sockets = await io.in(room.id).fetchSockets()
-
-  //     //assign won item to top bidder
-  //     if (item_index > 0) {
-  //       let data = await redisclient.get(JSON.stringify(room.id))
-  //       data = JSON.parse(data)
-  //       if (data.highestbid_data) {
-  //         const { user, bid } = data.highestbid_data;
-
-  //         if (user) {
-  //           let originalBal = data[JSON.stringify(user.userid)];
-  //           data[JSON.stringify(user.userid)] = originalBal - bid;
-
-  //           data.postgame.push({ user, item: data.currentItem, bid })
-
-  //           room.postgame.push({ user, item: data.currentItem, bid })
-  //           io.to(room.id).emit("updated_balance", { userid: user.userid, balance: data[JSON.stringify(user.userid)] })
-  //           data.highestbid_data = null;
+    // }, 140*1000);
 
 
-  //           updateRedisData(room.id, data)
-  //         }
-
-
-  //       }
-  //     }
-
-  //     if (item_index >= room.items_for_bid.length) {
-
-  //       let data = await redisclient.get(JSON.stringify(room.id));
-  //       if (data) {
-  //         data = JSON.parse(data);
-  //         distributeItems(data.postgame)
-  //       }
-
-  //       room.game_over = true;
-  //       io.in(room.id).disconnectSockets();
-  //       io.in(room.id).socketsLeave(room.id);
-  //       console.log("game over")
-  //       await redisclient.del(JSON.stringify(room.id))
-  //     }
-  //     else {
-  //       let item = room.items_for_bid[item_index]
-
-  //       let roomdata = await redisclient.get(JSON.stringify(room.id))
-
-  //       roomdata = JSON.parse(roomdata);
-  //       roomdata.currentItem = item;
-  //       updateRedisData(room.id, roomdata)
-
-  //       room.highestbidder = { user: null, bid: item.starting_bid }
-  //       io.to(room.id).emit("current bid", { highestBidder: room.highestbidder, bidmessage: "" });
-  //       itemBid(room, item, sockets, handler, secs)
-
-  //     }
-  //   };
-  //   round()
-  //   const interval = setInterval(round, secs * 1000)
-  //   setTimeout(() => {
-  //     clearInterval(interval);
-  //   }, secs * 1000 * rounds + 20);
 
   }catch(error) {
 
   }
   
 }
-function timer(secs, interval){
-  setTimeout(() => {
-    clearInterval(interval);
-  }, ((secs * 1000*3) + 100));
+async function startTimer(round, secs){
+    const local_interval = setInterval(async () => {
+      await round(local_interval);
+    }, (secs * 1000));
+    await round(local_interval);
 }
+async function increaseTimer(round, interval, secs){
+  clearInterval(interval)
+  const local_interval = setInterval(async () => {
+    await round(local_interval);
+  }, (secs+1) * 1000);
+}
+
 
 // function itemBid(room, item, sockets, handler, secs) {
 //   room.setUserActiveStatus(true, 0, true);
