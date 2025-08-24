@@ -27,7 +27,7 @@ function Home() {
     const updateMe = async()=>{
             try {
                 const user_id = localStorage.getItem("userid")
-                if(user != null || user_id){
+                if(user != null || user_id ){
                     const endpoint = `${apiURL}/users/me`;
                     const response = await fetch(endpoint, {
                         method: 'POST',

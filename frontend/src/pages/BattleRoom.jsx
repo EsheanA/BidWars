@@ -38,22 +38,19 @@ function BattleRoom(){
         })
 
         socket.current.connect()
-        if(localStorage.getItem("game") != null){
-            const game = JSON.parse(localStorage.getItem("game"));
-            
-            setGamestate(true)
-            setBalance(game.balance)
-            setBidOptions(game.bidOptions)
-        }
+
         socket.current.on("connect_error", (err) => {
             console.error("Connection failed:", err.message); 
             navigate("/")
         });
+
         socket.current.on("disconnect", (reason) => {
             console.log("Disconnected:", reason);
             navigate("/")
         });
+
         socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
+        
         socket.current.on("user data", data => {
             setUser({username: data.username, userid: data.id})
         })
@@ -80,19 +77,27 @@ function BattleRoom(){
         socket.current.on("current bid", data => {
             if(data){
                 console.log(data)
-                setHighestBidder({userid: data.bidder_id, message: data.bidmessage})
+                setHighestBidder({userid: data.bidder_id, message: data.bid_message})
                 setHighestBid(data.bid)
             }
         })
+        socket.current.on("updated_balance", data =>{
+            console.log(user)
+            if(user && data.userid == user.userid){
+                setBalance(data.balance)
+                console.log("balance: " + data.balance)
+            }
+        })
+
         socket.current.on("begin_game", (data)=> {
             setGamestate(true)
             if(data){
                 setBalance(data.balance)
                 setBidOptions(data.bidOptions)
-                localStorage.setItem("game", JSON.stringify({
-                    balance: data.balance,
-                    bidOptions: data.bidOptions
-                }))
+                // localStorage.setItem("game", JSON.stringify({
+                //     balance: data.balance,
+                //     bidOptions: data.bidOptions
+                // }))
                 
             }
         })
@@ -115,23 +120,21 @@ function BattleRoom(){
         };
     }
 
-    useEffect(()=>{
-        if(user){
-            socket.current.on("updated_balance", data =>{
-                if(data){
-                    if(user && data.userid == user.userid){
-                        setBalance(data.balance)
-                        console.log(data.balance)
-                        localStorage.setItem("game", JSON.stringify({
-                            balance: data.balance,
-                            bidOptions: data.bidOptions
-                        }))
-                    }
-                }
-            })
-        }
+    // useEffect(()=>{
+    //     if(user){
+    //         socket.current.on("updated_balance", data =>{
+    //                 if(user && data.userid == user.userid){
+    //                     setBalance(data.balance)
+    //                     console.log(data.balance)
+    //                     // localStorage.setItem("game", JSON.stringify({
+    //                     //     balance: data.balance,
+    //                     //     bidOptions: data.bidOptions
+    //                     // }))
+    //                 }
+    //         })
+    //     }
 
-    }, [user])
+    // }, [user])
 
        useEffect(()=>{
         if (timer > 1) {
@@ -142,11 +145,10 @@ function BattleRoom(){
           }
         }, [timer])
 
-    const makeBid = (val, player) =>{
-        console.log("pop")
-        // if(itemForBid){
-        //     socket.current.emit("bid", {user: player, balance, bid: highestBid+val})
-        // }
+    const makeBid = (value, player_id) =>{
+        if(itemForBid){
+            socket.current.emit("bid", {userid: player_id, bid: highestBid+value})
+        }
     }
 
     const renderUsers = users?.map((u) => {

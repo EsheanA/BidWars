@@ -2,6 +2,10 @@ const { createClient } = require("redis")
 const Room = require("./Room.js");
 const { callGrok } = require("../itemGeneration/grok.js");
 const auctionData = require('../auctions/auctionz.json')
+const Item = require('../models/Item');
+const User = require('../models/User')
+const crypto = require('crypto');
+
 require('dotenv').config();
 
 
@@ -71,7 +75,63 @@ class RoomHandler {
         }
     }
 
-    async awardItem(roomid){
+
+    async distributeItemDB(roomid){
+        try{
+            const room = await this.client.get(`room:${roomid}`);
+            const parsedRoom = JSON.parse(room);
+            const {itemData} = parsedRoom;
+            const {
+                name, 
+                value, 
+                description, 
+                img_url, 
+                audio_url, 
+                bidder_id, 
+                bid,
+                category, 
+                rarity
+            } = itemData;
+            if(bidder_id == null)
+                return;
+            const hashcode = crypto.createHash('sha256').update(name + bidder_id).digest('hex'); //item hash composed of item name & userid
+            const existingItem = await Item.findOne(
+                {hashcode: hashcode}
+            );
+
+            if(existingItem){
+                await Item.findOneAndUpdate(
+                        { hashcode: hashcode},
+                        { $inc: { amount: 1 } }
+                    );
+                }
+            else{
+                const newItem = new Item({
+                    hashcode: hashcode,
+                    name,
+                    value,
+                    img_url,
+                    audio_url,
+                    description,
+                    category,
+                    rarity,
+                    bid,
+                    amount: 1,
+                    owner: bidder_id
+                })
+                await newItem.save()
+            }
+            await User.findByIdAndUpdate(
+                bidder_id, 
+                { $inc:{ balance: -1*bid}}
+            );
+            
+        }catch(error){
+            console.error("Error distributing item: ", error)
+        }
+    }
+
+    async logItem(roomid){
         try{
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
@@ -79,13 +139,22 @@ class RoomHandler {
             if(userid != null){
                 const user = await this.client.get(`user:${userid}`)
                 const parsedUser = JSON.parse(user)
+
                 const currentItem = parsedRoom.itemData
-                parsedRoom.items.push(currentItem);
-                parsedRoom.itemData.bidder_id = null;
                 parsedUser.balance = parsedUser.balance - currentItem.bid;
+                // parsedRoom.items.push(currentItem);
+                parsedRoom.itemData.bidder_id = null;
+                parsedRoom.itemData.bid = null;
+                
+
                 await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
                 await this.client.set(`user:${userid}`, JSON.stringify(parsedUser));
-                return Promise.resolve({newBalance: parsedUser.balance, userid: user.userid});
+                console.log("balance: ", parsedUser.balance)
+                console.log("userid: ", userid)
+                return Promise.resolve({balance: parsedUser.balance, userid});
+            }
+            else{
+                return Promise.resolve({balance: null, userid: null});
             }
 
         }catch(error){
@@ -94,17 +163,21 @@ class RoomHandler {
         }
     }
 
-    async handleBid(roomid, userid, bid){
+    async handleBid(userid, bid){
         try{
-            const room = await this.client.get(`room:${roomid}`);
-            const parsedRoom = JSON.parse(room);
             const user = await this.client.get(`user:${userid}`)
             const parsedUser = JSON.parse(user)
-            if(parsedUser.balance >= bid){
+            const {roomid, active, balance} = parsedUser
+            const room = await this.client.get(`room:${roomid}`);
+
+            const parsedRoom = JSON.parse(room);
+
+            if(balance >= bid && active){
                 parsedRoom.itemData.bid = bid;
+                console.log("latest bid: ", parsedRoom.itemData.bid)
                 parsedRoom.itemData.bidder_id = userid;
-                await redis.client.set(`room:${roomid}`, JSON.stringify(parsedRoom))
-                return Promise.resolve({userid, bid})
+                await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom))
+                return Promise.resolve(JSON.stringify({userid, bid, roomid}))
             }
             else{   
                 return Promise.resolve({userid: null, bid})
@@ -136,7 +209,13 @@ class RoomHandler {
                     await this.client.set(`room:${room.id}`, JSON.stringify(room));
                     await this.client.lPush(`rooms:${auctionName}`, room.id);
                     //giving user a reference to the roomid
-                    await this.client.set(`user:${userid}`, JSON.stringify({ roomid: room.id, username, active: true, balance: max_balance, items: []}));
+                    await this.client.set(`user:${userid}`, JSON.stringify({ 
+                        roomid: room.id, 
+                        username, 
+                        active: true,
+                        balance: max_balance, 
+                        items: []
+                    }));
                     return Promise.resolve(room.id);
                 } 
                 //otherwise just add user to the room at the top of queue
@@ -154,7 +233,6 @@ class RoomHandler {
             else {
                 
                 const room = new Room(auctionName, auctionIndex);
-                console.log(room)
                 room.users.push({ userid, username, active: true });
                 //setting key to room via its id && also pushing roomid to queue
                 await this.client.set(`room:${room.id}`, JSON.stringify(room));
@@ -181,32 +259,25 @@ class RoomHandler {
             parsedRoom.users = parsedRoom.users.filter(kickuser => kickuser.userid != userid);
             await this.client.del([`user:${userid}`]);
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
-            console.log("User was kicked")
             return Promise.resolve();
-
 
         } catch (error) {
             console.error("Error kicking user: ", error);
             return Promise.reject(error);
         }
     }
+
     async toggleUsersActiveStatus(roomid){
         try {
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
-            // console.log("__________")
             parsedRoom.users.forEach(async(u, index, arr) => {
               const user = await this.client.get(`user:${u.userid}`);
               const parsedUser = JSON.parse(user);
-            //   console.log(parsedUser)
-            //   console.log("- - - - - - - -")
-            //   console.log(arr[index])
               if(parsedUser.active){
                 arr[index].active = true;
               }
-              console.log(arr[index].active)
             })
-            // console.log("__________")
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
             return Promise.resolve({users: JSON.stringify(parsedRoom.users)});
         } catch (error) {
@@ -300,10 +371,21 @@ class RoomHandler {
 
             const data = await callGrok(parsedRoom.auctionIndex)
             const parsedData = JSON.parse(data)
-            const {item, category, audio_url, img_url} = parsedData
+            const {item, category, rarity, audio_url, img_url} = parsedData
 
             const { item_name, item_value, starting_bid, item_guessing_range, item_description } = item;
-            parsedRoom.itemData = {name: item_name, value: item_value, bid: starting_bid, range: item_guessing_range, description: item_description, audio_url, img_url, bidder_id: null}
+            parsedRoom.itemData = {
+                name: item_name, 
+                value: item_value, 
+                bid: starting_bid, 
+                range: item_guessing_range, 
+                description: item_description, 
+                audio_url, 
+                img_url, 
+                bidder_id: null,
+                category: category,
+                rarity: rarity
+            }
 
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
             const getMaxBalance = () => {
@@ -311,7 +393,13 @@ class RoomHandler {
             }
 
             const max_balance = getMaxBalance();
-            return Promise.resolve(JSON.stringify({ rounds: parsedRoom.rounds, item_data: parsedRoom.itemData, category, max_balance, bid_options: parsedRoom.bid_options}));
+            return Promise.resolve(JSON.stringify({ 
+                rounds: parsedRoom.rounds, 
+                item_data: parsedRoom.itemData, 
+                max_balance, 
+                bid_options: parsedRoom.bid_options
+            }));
+
             // return Promise.resolve()
 
         } catch (error) {
@@ -325,11 +413,24 @@ class RoomHandler {
             const parsedRoom = JSON.parse(room);
             const data = await callGrok(parsedRoom.auctionIndex);
             const parsedData = JSON.parse(data);
-            const {item, category, audio_url, img_url} = parsedData;
+
+            const {item, category, audio_url, rarity, img_url} = parsedData;
             const { item_name, item_value, starting_bid, item_guessing_range, item_description } = item;
-            parsedRoom.itemData = {name: item_name, value: item_value, bid: starting_bid, range: item_guessing_range, description: item_description, audio_url, img_url, bidder_id: null}
+
+            parsedRoom.itemData = {
+                name: item_name, 
+                value: item_value, 
+                bid: starting_bid, 
+                range: item_guessing_range, 
+                description: item_description, 
+                audio_url, 
+                img_url, 
+                bidder_id: null,
+                category: category,
+                rarity: rarity
+            }
             await this.client.set(`room:${roomid}`, JSON.stringify(parsedRoom));
-            return Promise.resolve(JSON.stringify({item_data: parsedRoom.itemData, category}))
+            return Promise.resolve(JSON.stringify({item_data: parsedRoom.itemData}))
 
         }catch(error){
             console.error("Error setting next item: ", roomid);
@@ -351,10 +452,12 @@ class RoomHandler {
     }
     async startGame(roomid) {
         try {
+
             const room = await this.client.get(`room:${roomid}`);
             const parsedRoom = JSON.parse(room);
             parsedRoom.in_progress = true;
             return Promise.resolve()
+
         } catch (error) {
             console.error("Error starting game: ", error)
             return Promise.reject(error)

@@ -1,7 +1,7 @@
 import {useState, useContext} from 'react'
 import { AppContext } from '../../AppContext/context'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
-function ItemCard({setItems, name, value, url, item_id, quantity}){
+function ItemCard({setItems, name, value, img_url, item_id, quantity}){
     const [quantityToSell, setQuantitytoSell] = useState(1)
     const [sell, setSell] = useState(false)
     const [user, setUser] = useContext(AppContext)
@@ -29,7 +29,7 @@ function ItemCard({setItems, name, value, url, item_id, quantity}){
     }
     return(
         <div className = "itemCard">
-            <img src = {`${apiURL}/items/` + url} />
+            <img src = {`${apiURL}/GoldSVGs/` + img_url} />
             {
                 !sell ?
                 <div style = {{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>

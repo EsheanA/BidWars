@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Item = require('../models/Item');
 
-const { generateAccessToken, generateRoomAccessToken } = require('../tokenHandling/generateToken');
-const { generateItems } = require('../itemGeneration/generateItems')
+const { generateAccessToken} = require('../tokenHandling/generateToken');
 const router = express.Router();
 const crypto = require('crypto');
 

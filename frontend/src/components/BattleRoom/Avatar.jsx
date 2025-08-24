@@ -3,9 +3,10 @@ import Chatbubble from './Chatbubble.jsx'
 
 function Avatar({name, self, bidOptions, makeBid, highestBidder, user, active}) {
     const [readyBid, setReadyBid] = useState(false)
+    //butt is the item of bidOptions, an integer bid option
     const buttons = bidOptions?.map(butt =>{
       return(
-        <button className = "bidButton" onClick = {()=>makeBid(butt, user)}>${JSON.stringify(butt)}</button>
+        <button className = "bidButton" onClick = {()=>makeBid(butt, user.userid)}>${JSON.stringify(butt)}</button>
       )
     })
     return (

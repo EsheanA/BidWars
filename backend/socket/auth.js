@@ -6,16 +6,18 @@ require('dotenv').config();
 
 
 const verifyJwt = promisify(jwt.verify)
+
 socketAuth = async (socket, next) => {
     const { roomToken } = socket.handshake.auth;
     const { auction } = socket.handshake.query
-
+    console.log("Room token: ",roomToken)
     if (roomToken) {
         const session = await verifyJwt(roomToken, process.env.ACCESS_TOKEN_SECRET, {
             algorithms: ["HS256"]
         })
         if(session){
-            if ( !(await redisRoomHandler.checkGameStarted(session.roomid)) || !(await redisRoomHandler.userExist(session.userid))) {
+            if (!(await redisRoomHandler.checkGameStarted(session.roomid)) || !(await redisRoomHandler.userExist(session.userid))) {
+                console.log("game started/user doesn't exist error")
                 return next(new Error("Authentication error"))
             }
             else{
@@ -23,8 +25,11 @@ socketAuth = async (socket, next) => {
                 return next();
             }
         }else{
+            console.log("no session error")
             return next(new Error("Authentication error"))
         }
+
+        
         // return jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET, (err, session) => {
         // if (err || !(redisRoomHandler.userExist(session.userid))) {
         //     return next(new Error("Authentication error"))
@@ -36,6 +41,7 @@ socketAuth = async (socket, next) => {
         // });
     } 
     else {
+        console.log("Entering match")
         const rawCookie = socket.handshake.headers.cookie || "";
         const parsedCookies = cookie.parse(rawCookie)
         const userid  = socket.handshake.auth.userid;

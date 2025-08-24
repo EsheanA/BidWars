@@ -54,7 +54,6 @@ async function initSocket(server, corsOpts) {
                 userID = userid;
                 const roomid = await redisRoomHandler.findRoom(userid, username, 0);
                 roomID = roomid;
-
                 socket.join(roomid)
                 const roomToken = generateRoomAccessToken({userid, username}, roomid)
                 io.to(socket.id).emit("room token", { roomToken });

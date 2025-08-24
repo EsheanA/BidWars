@@ -15,6 +15,7 @@ function Registration(){
     const [password, setPassword] = useState("")
     const [toggle, setToggle] = useState(true)
     const navigate = useNavigate()
+
     const handleSubmit = async(e)=>{
         e.preventDefault()
         const path = toggle ? "signup" : "login";
@@ -29,16 +30,18 @@ function Registration(){
                     },
                     body: JSON.stringify({ username, password}),
                 });
+
                 const data = await response.json();
+
                 if (data != null) {
                     if(toggle)
                         setToggle(!toggle)
                     else{
                         const { username, userid, balance} = data;
                         localStorage.setItem("userid", userid)
-                        setUser({ username, userid,balance});
-                        
+                        setUser({ username, userid, balance});
                     }
+
                 }
 
             } catch (error) {
@@ -51,6 +54,7 @@ function Registration(){
         if(user)
             navigate("/")
     }, [user])
+    
     return(
         <div className = "registration">
             <Nav />
