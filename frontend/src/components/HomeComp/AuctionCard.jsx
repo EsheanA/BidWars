@@ -6,13 +6,13 @@ import {useNavigate} from 'react-router-dom'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 
-function AuctionCard({name, image, start, end}){
+function AuctionCard({name, image, start, end, items, index}){
     const [locked, setLocked] = useState(false)
     const [user, setUser] = useContext(AppContext)
     const navigate = useNavigate();
     const handleSubmit = (e) => {
         e.preventDefault()
-        if (user) {
+        if (user && user.balance >= end) {
             fetch(`${apiURL}`, {
                 method: "POST",
                 credentials: 'include',
@@ -20,6 +20,7 @@ function AuctionCard({name, image, start, end}){
                 body: JSON.stringify({ userid: user?.userid })
             })
                 .then(() => {
+                    localStorage.setItem("chosenAuction", String(index))
                     navigate("/BattleRoom");
                     console.log("success")
                 })
@@ -33,10 +34,11 @@ function AuctionCard({name, image, start, end}){
             {/* <img className = "Padlock" src = "images/padlock.svg" style = {{display: locked ? "block" : "none", position: "absolute", top: "25%", left: "7%", opacity: 1, border: "none"}}/> */}
             {/* <img src = "https://placehold.co/300x150"/> */}
             {/* <img src = "auctionImages/garage.jpg" /> */}
-            <img src = {"auctionImages/" + image} />
+            <img className = "auction_img" src = {"auctionImages/" + image} />
             <h1>${start}-${end} Auction: <span style = {{color: "white"}}>{name}</span></h1>
 
-            <IconCarousel />
+            <IconCarousel items = {items}/>
+            {/* <IconCarousel /> */}
             <input type = "button" onClick = {handleSubmit} value = "Enter"/>
         </div>
     )

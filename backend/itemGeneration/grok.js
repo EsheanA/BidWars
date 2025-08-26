@@ -6,6 +6,7 @@ const {Readable} = require("stream");
 const {finished} = require("stream/promises")
 // const {exec} = require("child_process")
 const auctionData = require('../auctions/auctionz.json')
+const { v4: uuidv4 } = require("uuid");
 require('dotenv').config();
 
 
@@ -102,9 +103,10 @@ async function callGrok(auctionIndex){
       })
       })
       const filename = schema.item_name.replaceAll(" ", "_")
-      const fileStream = createWriteStream(`audioFiles/${filename}.mp3`, { flags: "wx" });
+      const unique = uuidv4()
+      const fileStream = createWriteStream(`audioFiles/${filename}_${unique}.mp3`, { flags: "wx" });
       await finished(Readable.fromWeb(responseTTS.body).pipe(fileStream));
-      return(Promise.resolve(JSON.stringify({item: schema, category, rarity, audio_url: `audioFiles/${filename}.mp3`, img_url: `${category}.svg`})))
+      return(Promise.resolve(JSON.stringify({item: schema, category, rarity, audio_url: `audioFiles/${filename}_${unique}.mp3`, img_url: `${category}.svg`})))
     }catch(error){
       console.error("Grok call failed: ", error)
       return(Promise.reject(error))

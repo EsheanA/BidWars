@@ -27,14 +27,20 @@ function BattleRoom(){
 
     useEffect(() => {
         let roomToken = localStorage.getItem("roomtoken");
-        // let accessToken = localStorage.getItem("accesstoken");
+        let chosenAuction = localStorage.getItem("chosenAuction")
+        chosenAuction = chosenAuction ? String(chosenAuction) : 0
+
+
         socket.current = io(apiURL, { 
             autoConnect: false,
             withCredentials: true,
             auth: {
                 roomToken,
                 userid: user?.userid
-            }
+            },
+            query: {
+                auctionIndex: chosenAuction 
+            }   
         })
 
         socket.current.connect()
@@ -54,6 +60,7 @@ function BattleRoom(){
         socket.current.on("user data", data => {
             setUser({username: data.username, userid: data.id})
         })
+        
         socket.current.on("user list", (data) => {
             console.log(data.userlist)
             setUsers(data.userlist)}
@@ -62,9 +69,9 @@ function BattleRoom(){
         socket.current.on("setItem", data => {
             const parsedData = JSON.parse(data);
             console.log(parsedData)
-            const {name, value, description, bid, audio_url, img_url} = parsedData.item
+            const {name, value, description, bid, audio_url, img_url, range, rarity} = parsedData.item
 
-            setItemForBid({name, value, description, img_url, audio_url})
+            setItemForBid({name, value, description, img_url, audio_url, range, rarity})
             setHighestBid(bid)
             setHighestBidder(null)
 
@@ -94,11 +101,6 @@ function BattleRoom(){
             if(data){
                 setBalance(data.balance)
                 setBidOptions(data.bidOptions)
-                // localStorage.setItem("game", JSON.stringify({
-                //     balance: data.balance,
-                //     bidOptions: data.bidOptions
-                // }))
-                
             }
         })
         
@@ -137,7 +139,7 @@ function BattleRoom(){
     // }, [user])
 
        useEffect(()=>{
-        if (timer > 1) {
+        if (timer > 0) {
             const timeout = setTimeout(() => {
               setTimer(prev => prev - 1);
             }, 1000);
@@ -158,8 +160,8 @@ function BattleRoom(){
     })
     return(
         <div className = "BattleRoom">
-            <div className = "Balance">Balance: ${balance}  {timer? ` Time Left: ${timer}`: ""}</div>
-            <Spotlight item = {itemForBid} announcement = {announcement} highestBid = {highestBid}/>
+            <div className = "Balance">Balance: ${balance}  {timer && timer != 0 ? ` Time Left: ${timer}`: ""}</div>
+            <Spotlight item = {itemForBid} announcement = {announcement} highestBid = {highestBid} timer = {timer} />
 
             <div className = "AvatarSpread">
                 {renderUsers}

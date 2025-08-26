@@ -53,22 +53,13 @@ router.post('/login', async (req, res) => {
             secure: true,
             sameSite: 'none',
             maxAge: 7 * 24 * 60 * 60 * 1000
-        }).json({ userid: user._id, username: user.username, balance: user.balance });
-
-
-        
-        // res.status(201).json({ message: "login successful", user })
-
+        }).json({ success: true, userid: user._id, username: user.username, balance: user.balance });
 
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Login failed' });
     }
 });
-
-
-
-
 
 router.post('/logout', async (req, res) => {
     try {
@@ -157,10 +148,5 @@ router.post('/item/sell', async (req, res) => {
         res.status(401).json({ error: 'Invalid token' });
     }
 })
-
-
-
-
-
 
 module.exports = router;

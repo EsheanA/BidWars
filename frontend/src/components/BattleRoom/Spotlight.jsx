@@ -2,7 +2,8 @@
 import {useState, useEffect,useRef} from 'react'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 import Auctioneer from "./Auctioneer"
-function Spotlight({item, announcement, highestBid}) {
+import Item from "./Item"
+function Spotlight({item, announcement, highestBid, timer}) {
 
     const [visible, setVisible] = useState(true)
     const imgRef = useRef(null)
@@ -26,17 +27,30 @@ function Spotlight({item, announcement, highestBid}) {
     }, [item])
 
     useEffect(()=>{
+      console.log(timer)
+      if(timer != null && timer <= 0){
+        setVisible((true))
+        setTimeout(() => {
+          for(let i = 0; i<= 10; i++){
+            setTimeout(() => {
+              setVisible((i%2==0 ? true : false))
+            }, i*100);
+          }
+          setTimeout(() => {
+            setVisible(false);
+          }, 11 * 100);
+        }, 500);
+
+        }
+    }, [timer])
+
+    useEffect(()=>{
       const img = imgRef.current;
       if(imgRef.current && item){
         const handleLoad = () => {
           console.log(img.naturalWidth)
           console.log(img.naturalHeight)
           setIsImage(img.naturalWidth > img.naturalHeight);
-          // if(announcement == "")
-          //   setAnnouncement("diddy")
-          // else
-          //   setAnnouncement("")
-
         };
         img.addEventListener('load', handleLoad);
         return () => img.removeEventListener('load', handleLoad);
@@ -50,11 +64,12 @@ function Spotlight({item, announcement, highestBid}) {
         <div className = "Spotlight" style={{ display: visible ? "flex" : "none" }}>
             <img ref={imgRef} src = {`/${apiURL}/` + item?.img_url} style = {{display: "none"}}/>
             <img className = "Spotlight-img" src = "/images/spotlight.jpg"/>
-            {item ? <img className = "itemForBid"  src = {`${apiURL}/GoldSVGs/` + item?.img_url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/>: <span/>}
-
-            {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>}
+            {/* {item ? <img className = "itemForBid"  src = {`${apiURL}/GoldSVGs/` + item?.img_url} style = {isImage ? {height: `auto`, width: '30vh' } : {height: '17vh', width : 'auto'}}/>: <span/>}
+            {item ? <div className = "highestBid"> ${highestBid} </div> : <div/>} */}
+            <Item item = {item} highestBid={highestBid} isImage = {isImage} />
         </div>
         <Auctioneer announcement = {announcement}/>
+
       </>
     )
   }

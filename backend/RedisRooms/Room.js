@@ -1,6 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
 const auctionData = require("../auctions/auctionz.json")
-const {generateItems} = require('../itemGeneration/generateItems')
 
 class Room{
 

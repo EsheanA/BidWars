@@ -32,8 +32,8 @@ function Registration(){
                 });
 
                 const data = await response.json();
-
-                if (data != null) {
+                console.log(data)
+                if (data.success) {
                     if(toggle)
                         setToggle(!toggle)
                     else{
@@ -41,7 +41,6 @@ function Registration(){
                         localStorage.setItem("userid", userid)
                         setUser({ username, userid, balance});
                     }
-
                 }
 
             } catch (error) {

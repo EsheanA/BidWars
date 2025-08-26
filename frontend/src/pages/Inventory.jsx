@@ -26,7 +26,10 @@ function Inventory() {
                     },
                     body: JSON.stringify({ userid: user.userid }),
                 });
-            
+                if(!response.ok){
+                    console.error("Unexpected error:", response.status);
+                    navigate("/")
+                }
                 const data = await response.json();
                 console.log(data)
                 const {itemList} = data;

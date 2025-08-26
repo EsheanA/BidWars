@@ -37,6 +37,8 @@ async function initSocket(server, corsOpts) {
     io.on("connection", async (socket) => {
         let userID;
         let roomID;
+        const auctionIndex = socket.auctionIndex;
+        console.log(auctionIndex)
         try{
             if(socket.session) {
                 const {userid, roomid} = socket.session;
@@ -50,9 +52,8 @@ async function initSocket(server, corsOpts) {
             }
             else {
                 const { userid, username } = socket.user
-                // const auctionName = socket.auctionName
                 userID = userid;
-                const roomid = await redisRoomHandler.findRoom(userid, username, 0);
+                const roomid = await redisRoomHandler.findRoom(userid, username, auctionIndex);
                 roomID = roomid;
                 socket.join(roomid)
                 const roomToken = generateRoomAccessToken({userid, username}, roomid)
@@ -70,14 +71,21 @@ async function initSocket(server, corsOpts) {
             socket.emit("error message", "Room not found or full");
         }
         socket.on("disconnect", async() => {
+            try{
+
+           
             console.log("left")
             if(await redisRoomHandler.checkGameStarted(roomID))
                 await redisRoomHandler.toggleUserActiveStatus(userID)
             else{
-                await redisRoomHandler.kickUser(userID)
+                await redisRoomHandler.kickUser(userID, roomID)
             }
             const users = await redisRoomHandler.getUsers(roomID)
-            await io.to(roomID).emit('user list', { userlist: users })
+            if(users.length == 0)
+                await redisRoomHandler.deleteRoom(roomID);
+            else
+                await io.to(roomID).emit('user list', { userlist: users })
+            }catch(error){}
         }); 
     });
     return io;

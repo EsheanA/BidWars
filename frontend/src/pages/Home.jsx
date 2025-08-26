@@ -39,8 +39,11 @@ function Home() {
                     });
 
                     const data = await response.json();
-                    const { username, userid, balance } = data;
-                    setUser({ username, userid, balance });
+                    if(data){
+                        const { username, userid, balance } = data;
+                        setUser({ username, userid, balance });
+                    }
+                    
      
             }
             }catch(error) {
@@ -71,7 +74,7 @@ function Home() {
             <Nav />
             <div className="Body">
                 <AuctionDisplay />
-                <div className = "HelloRight">Heloo I am on the right side</div>
+                <div className = "HelloRight">Coming Soon</div>
             </div>
             <Footer />
 

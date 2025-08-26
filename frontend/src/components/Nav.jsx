@@ -29,13 +29,9 @@ function Nav() {
       <>
        <div className="navbar bg-orange-900 shadow-sm Nav">
                 <div className="navbar-start">
-                <Link to = {{pathname: "/"}}><img src = "/images/logo.png" height = "140px" width = "140px"/></Link>
                 </div>
                 <div className="navbar-center">
-                    {/* <a className="btn btn-ghost text-xl">BidWars</a> */}
-                    
-                    
-                    
+                    <Link to = {{pathname: "/"}}><img src = "/images/logo4.png" height = "140px" width = "140px"/></Link>
                 </div>
                 <div className="navbar-end">
                     {/* <button className="btn btn-ghost btn-circle">

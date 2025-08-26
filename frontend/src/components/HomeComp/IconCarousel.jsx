@@ -1,10 +1,13 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 // import "./IconCarousel.css";
 
 const defaultIcons = ["🔥", "🚀", "🎯", "💡"];
 
 export default function IconCarousel({
+  // icons,
   items = defaultIcons,
+  // items = icons,
   speed = 60,         
   gap = 16,           
 }) {
@@ -82,9 +85,17 @@ export default function IconCarousel({
 
       {/* Animated track */}
       <div className="carousel-track">
-        {repeated.map((icon, i) => (
+        {
+          items == defaultIcons ?
+        repeated.map((icon, i) => (
           <div className="icon" key={i}>{icon}</div>
-        ))}
+        )) :
+        repeated.map((icon, i) => (
+          // <div className="icon" key={i}><img className = "auction_icon" src = {`${apiURL}/BidWarsSVGs/${icon}.svg`} height = {32} width = {32}/></div>
+          <div className="icon" key={i}><img className = "auction_icon" src = {`${apiURL}/GoldSVGs/${icon}.svg`} height = {32} width = {32}/></div>
+
+        ))
+        }
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ const verifyJwt = promisify(jwt.verify)
 
 socketAuth = async (socket, next) => {
     const { roomToken } = socket.handshake.auth;
-    const { auction } = socket.handshake.query
+    const { auctionIndex } = socket.handshake.query
     console.log("Room token: ",roomToken)
     if (roomToken) {
         const session = await verifyJwt(roomToken, process.env.ACCESS_TOKEN_SECRET, {
@@ -22,6 +22,7 @@ socketAuth = async (socket, next) => {
             }
             else{
                 socket.session = session;
+                socket.auctionIndex = auctionIndex
                 return next();
             }
         }else{
@@ -29,16 +30,6 @@ socketAuth = async (socket, next) => {
             return next(new Error("Authentication error"))
         }
 
-        
-        // return jwt.verify(roomToken, process.env.ACCESS_TOKEN_SECRET, (err, session) => {
-        // if (err || !(redisRoomHandler.userExist(session.userid))) {
-        //     return next(new Error("Authentication error"))
-        // }
-        // else{
-        //     socket.session = session;
-        //     return next();
-        // }
-        // });
     } 
     else {
         console.log("Entering match")
@@ -52,7 +43,7 @@ socketAuth = async (socket, next) => {
                 return next(new Error("Authentication error"))
             }
             else{
-                socket.auctionName = auction;
+                socket.auctionIndex = auctionIndex;
                 socket.user = user;
                 return next();
             }
