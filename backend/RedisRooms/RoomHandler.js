@@ -16,7 +16,7 @@ class RoomHandler {
                 url: process.env.REDIS_URL,
                 socket: {
                     tls: true,
-                    rejectUnauthorized: false,
+                    rejectUnauthorized: true,
                 }
             });
 

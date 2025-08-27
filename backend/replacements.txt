@@ -1,0 +1,6 @@
+# Replace any xAI-style key literals in code/history with a safe token
+regex:"xai-[A-Za-z0-9]{20,}"==>REDACTED_XAI_KEY
+# If the exact value appears quoted, also catch it (belt & suspenders)
+regex:"(xai-[A-Za-z0-9]{20,})"==>"REDACTED_XAI_KEY"
+# Explicit replacement for the leaked key you saw in history
+xai-F76baoSQBQnQkUeOg8GAHHqDLVaGLFvwg37yc8PA2cBpAl3mv2cn1YJE4Xbl3eI4WfhoCXMeSuPqhzh5==>REDACTED_XAI_KEY

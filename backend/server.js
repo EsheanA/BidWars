@@ -19,17 +19,22 @@ const { initSocket } = require("./socket/index.js")
 // app.use(express.static(path.join(__dirname, 'public')));
 
 const path = require('path');
-const {createVoicelines} = require('./ollama/child.js')
 app.use('/audioFiles', express.static(path.join(__dirname, 'audioFiles')));
 app.use('/BidWarsSVGs', express.static(path.join(__dirname, 'BidWarsSVGs')));
 app.use('/GoldSVGs', express.static(path.join(__dirname, 'GoldSVGs')));
 
 function validateOrigin(origin) {
-  const originSlice = origin.slice(0, 17)
-  if (originSlice === "http://localhost:") {
+  if (origin === "https://bid-wars-ten.vercel.app") {
     return true;
   }
-  return false;
+  else {
+    const originSlice = origin.slice(0, 17)
+    if (originSlice === "http://localhost:") {
+      return true;
+    }
+    return false;
+  }
+
 }
 
 
@@ -43,7 +48,14 @@ const corsOpts = {
       },
       credentials: true
 }
-app.use(cors(corsOpts));  
+
+// const corsOpts = {
+//   origin: validateOrigin,
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+// }
+app.use(cors(corsOpts));
 
 app.use(express.json())
 app.use(cookieParser());
@@ -54,7 +66,7 @@ app.use('/auctions', auctionRouter);
 app.post('/', (req, res) => {
   try {
     // console.log("wtf")
-    const {userid} = req.body
+    const { userid } = req.body
     const token = req.cookies[`token_${userid}`]
     console.log(token)
     if (!token) {
@@ -62,10 +74,10 @@ app.post('/', (req, res) => {
     }
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     console.log(decoded)
-    if(decoded){
+    if (decoded) {
       res.status(200).send('Server is up');
     }
-    else{
+    else {
       console.log("Invalid token")
       res.status(401).json({ error: 'Invalid token' });
     }
@@ -73,60 +85,6 @@ app.post('/', (req, res) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
-
-async function distributeItems(postgamedata){
-  const usermap = new Map()
-  for(let round of postgamedata){
-    const currUser = round.user;
-    const currItem = round.item;
-    const bid = round.bid;
-    const {userid, username} = currUser;
-    const balance = usermap.get(userid)
-    const {name, value, url} =  currItem;
-
-    if(balance){
-      usermap.set(userid, balance+bid)
-    }
-    else{
-      usermap.set(userid, bid)
-    }
-    const hashcode = crypto.createHash('sha256').update(name + userid).digest('hex'); //item hash composed of item name & userid
-    const existingItem = await Item.findOne(
-      {hashcode: hashcode}
-    )
-    if(existingItem){
-      const result = await Item.findOneAndUpdate(
-        { hashcode: hashcode},
-        { $inc: { amount: 1 } }
-      );
-    }
-    else{
-      const newItem = new Item({
-        hashcode: hashcode,
-        name,
-        value,
-        url,
-        amount: 1,
-        owner: userid
-      })
-      await newItem.save()
-    }
-  }
-
-  for(let key of usermap.keys()){
-    const decrement = usermap.get(key)
-    const result = await User.updateOne(
-      { _id: key },
-      { $inc: { balance: -decrement } }
-    );
-  }
-}
- 
-  
-
-
-
-
 
 
 
@@ -139,7 +97,7 @@ async function startServer() {
       console.log(`Server is running on port 3000`);
     });
 
-    await initSocket(server, corsOpts) 
+    await initSocket(server, corsOpts)
 
 
   } catch (err) {
