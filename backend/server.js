@@ -19,7 +19,26 @@ const { initSocket } = require("./socket/index.js")
 // app.use(express.static(path.join(__dirname, 'public')));
 
 const path = require('path');
-app.use('/audioFiles', express.static(path.join(__dirname, 'audioFiles')));
+
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+app.use(
+  "/audioFiles",
+  express.static(path.join(__dirname, "audioFiles"), {
+    maxAge: ONE_DAY,
+    etag: true,
+    setHeaders(res) {
+      // allow your Vercel app to read/play files
+      res.setHeader("Access-Control-Allow-Origin", "https://bid-wars-ten.vercel.app");
+      // if you ever need cookies/credentials for audio (usually no):
+      // res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Accept-Ranges", "bytes"); // seek support in <audio>
+      // optional: help client-side caching
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    },
+  })
+);
+// app.use('/audioFiles', express.static(path.join(__dirname, 'audioFiles')));
 app.use('/BidWarsSVGs', express.static(path.join(__dirname, 'BidWarsSVGs')));
 app.use('/GoldSVGs', express.static(path.join(__dirname, 'GoldSVGs')));
 
