@@ -23,39 +23,73 @@ app.use('/audioFiles', express.static(path.join(__dirname, 'audioFiles')));
 app.use('/BidWarsSVGs', express.static(path.join(__dirname, 'BidWarsSVGs')));
 app.use('/GoldSVGs', express.static(path.join(__dirname, 'GoldSVGs')));
 
-function validateOrigin(origin) {
-  if (origin === "https://bid-wars-ten.vercel.app") {
-    return true;
-  }
-  else {
-    const originSlice = origin.slice(0, 17)
-    if (originSlice === "http://localhost:") {
+// function validateOrigin(origin) {
+//   if (origin === "https://bid-wars-ten.vercel.app") {
+//     return true;
+//   }
+//   else {
+//     const originSlice = origin.slice(0, 17)
+//     if (originSlice === "http://localhost:") {
+//       return true;
+//     }
+//     return false;
+//   }
+
+// }
+
+
+// const corsOpts = {
+//   origin: function (origin, callback) {
+//         if (!origin || validateOrigin(origin)) {
+//           return callback(null, true);
+//         }
+//         else
+//           return callback(new Error('Not allowed by CORS'));
+//       },
+//       credentials: true
+// }
+
+
+function isAllowedOrigin(origin) {
+  // allow non-browser callers (no Origin header): health checks, curl, server-to-server
+  if (!origin) return true;
+
+  try {
+    const u = new URL(origin);
+    // allow any localhost port in dev
+    if (u.hostname === "localhost" && (u.protocol === "http:" || u.protocol === "https:")) {
       return true;
     }
+    // allow your prod frontend (exact host)
+    if (u.hostname === "bid-wars-ten.vercel.app" && u.protocol === "https:") {
+      return true;
+    }
+  } catch {
+    // invalid Origin header → reject
     return false;
   }
-
+  return false;
 }
-
 
 const corsOpts = {
-  origin: function (origin, callback) {
-        if (!origin || validateOrigin(origin)) {
-          return callback(null, true);
-        }
-        else
-          return callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true
-}
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
 
+// BEFORE your routers:
+app.use(cors(corsOpts));
 // const corsOpts = {
 //   origin: validateOrigin,
 //   credentials: true,
 //   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 //   allowedHeaders: ["Content-Type", "Authorization"],
 // }
-app.use(cors(corsOpts));
 
 app.use(express.json())
 app.use(cookieParser());
