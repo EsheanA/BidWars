@@ -4,6 +4,8 @@ BidWars is a real-time multiplayer auction game where players compete to win ite
 
 Built as a full-stack project focused on real-time systems, state synchronization, authentication, and external API integration.
 
+Deployment note: BidWars is not currently live because some of its external services, including text-to-speech, incur ongoing usage costs. The repository remains available for code review.
+
 Tech Stack
 
 * Frontend: React, Vite, Tailwind CSS, DaisyUI
