@@ -527,7 +527,6 @@ class RoomHandler {
 
 
 const redisRoomHandler = new RoomHandler();
-// Exporting the singleton instance
 module.exports = redisRoomHandler;
 
 
