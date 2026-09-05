@@ -1,4 +1,3 @@
-import AuctionCard from "./AuctionCard"
 import SimpleSlider from "./SimpleSlider"
 import {useState} from "react"
 function AuctionDisplay(){

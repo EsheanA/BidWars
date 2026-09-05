@@ -24,7 +24,7 @@ app.use(
     maxAge: ONE_DAY,
     etag: true,
     setHeaders(res) {
-      res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+      res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Accept-Ranges", "bytes");
       res.setHeader("Cache-Control", "public, max-age=86400, immutable");
     },

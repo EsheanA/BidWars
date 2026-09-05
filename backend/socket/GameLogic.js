@@ -87,7 +87,7 @@ async function handleGameLogic(io, roomid) {
         } else {
 
           var parsed_item_data = new_item;
-          if (current_round != rounds) { //here we say: if we aren't on the first round
+          if (current_round != rounds) { 
             new_item = await redisRoomHandler.setItem(roomid);
             parsed_item_data = JSON.parse(new_item).item_data
           }

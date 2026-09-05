@@ -4,7 +4,6 @@ const { z } = require("zod");
 const {createWriteStream} = require("fs")
 const {Readable} = require("stream");
 const {finished} = require("stream/promises")
-// const {exec} = require("child_process")
 const auctionData = require('../auctions/auctionz.json')
 const { v4: uuidv4 } = require("uuid");
 require('dotenv').config();
@@ -88,20 +87,24 @@ async function callGrok(auctionIndex){
         });
 
       const schema = response.choices[0].message.parsed;
-      // console.log(schema);
+      console.log(schema);
       
 
       const responseTTS = await fetch("https://api.lemonfox.ai/v1/audio/speech", {
       method: "POST",
       headers: {
           "Authorization": `Bearer ${process.env.LEMON_FOX_KEY}`,
+          "Content-Type": "application/json",
       },
       body: JSON.stringify({
+          model: "lemon-fox-v1",
           input: schema.item_description,
           voice: "adam",
           response_format: "mp3"
       })
       })
+      console.log("STATUS:", responseTTS.status);
+      console.log("CONTENT-TYPE:", responseTTS.headers.get("content-type"));
       const filename = schema.item_name.replaceAll(" ", "_")
       const unique = uuidv4()
       const fileStream = createWriteStream(`audioFiles/${filename}_${unique}.mp3`, { flags: "wx" });

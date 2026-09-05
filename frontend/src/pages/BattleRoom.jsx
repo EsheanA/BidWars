@@ -112,8 +112,7 @@ function BattleRoom(){
     }, []);
 
     const playAudio = (filename) => {
-        // const audio = new Audio(`http://localhost:3000/${filename}`);
-        const audio = new Audio(`https://bidwars-ecl2.onrender.com/${filename}`);
+        const audio = new Audio(`http://localhost:3000/${filename}`);
         
         audio.play().catch((err) => {
             console.error('Error playing audio:', err);
