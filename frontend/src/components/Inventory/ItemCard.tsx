@@ -1,5 +1,5 @@
 import {useState, useContext} from 'react'
-import { AppContext } from '../../AppContext/context'
+import { AppContext } from '../../AppContext/context.js'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 

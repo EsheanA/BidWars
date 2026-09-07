@@ -1,9 +1,9 @@
-import Nav from '../components/Nav.jsx'
-import Footer from '../components/Footer.jsx'
-import LoginForm from '../components/forms/LoginForm.jsx';
-import SignupForm from '../components/forms/SignupForm.jsx';
+import Nav from '../components/Nav.js'
+import Footer from '../components/Footer.js'
+import LoginForm from '../components/forms/LoginForm.js';
+import SignupForm from '../components/forms/SignupForm.js';
 import { useState, useEffect } from "react"
-import {AppContext} from '../AppContext/context.jsx';
+import {AppContext} from '../AppContext/context.js';
 import {useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;

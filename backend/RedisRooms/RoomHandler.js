@@ -496,19 +496,6 @@ class RoomHandler {
 
     async deleteRoom(roomid) {
         try {
-            // const room = await this.client.get(`room:${roomid}`);
-            // const parsedRoom = JSON.parse(room);
-            // var users = parsedRoom.users;
-
-            // users.forEach(async(u, index, arr) => {
-            //     arr[index] = `user:${u.userid}`;
-            // });
-
-            // await this.client.del(users, (err, response) => {
-            //     if (err) throw err;
-            //     console.log(`Deleted keys: ${response}`);
-            // });
-
             await this.client.del(`room:${roomid}`, (err, response) => {
                 if (err) throw err;
                 console.log(`Deleted keys: ${response}`); // response will be 1

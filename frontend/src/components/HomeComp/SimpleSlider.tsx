@@ -1,7 +1,7 @@
 import React from "react";
 import {useState, useEffect} from "react";
 import Slider from "react-slick";
-import AuctionCard from "./AuctionCard";
+import AuctionCard from "./AuctionCard.js";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;

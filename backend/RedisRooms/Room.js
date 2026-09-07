@@ -2,7 +2,6 @@ const { v4: uuidv4 } = require("uuid");
 const auctionData = require("../auctions/auctionz.json")
 
 class Room{
-
     constructor(auctionName, auctionIndex){
         this.id = uuidv4()
         this.users = [];

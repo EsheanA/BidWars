@@ -1,9 +1,9 @@
-import Nav from '../components/Nav.jsx';
-import Footer from '../components/Footer.jsx';
-import AuctionDisplay from '../components/HomeComp/AuctionDisplay.jsx';
+import Nav from '../components/Nav.js';
+import Footer from '../components/Footer.js';
+import AuctionDisplay from '../components/HomeComp/AuctionDisplay.js';
 import './Pages.css';
 import { useState, useEffect } from "react"
-import { AppContext } from '../AppContext/context.jsx';
+import { AppContext } from '../AppContext/context.js';
 import { useContext } from 'react';
 import { useNavigate } from "react-router-dom"
 import '@fortawesome/fontawesome-free/css/all.min.css';

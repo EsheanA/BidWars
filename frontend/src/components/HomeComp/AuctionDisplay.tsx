@@ -1,4 +1,4 @@
-import SimpleSlider from "./SimpleSlider"
+import SimpleSlider from "./SimpleSlider.js"
 import {useState} from "react"
 function AuctionDisplay(){
     const [backgroundColor, setBackgroundColor] = useState("black")

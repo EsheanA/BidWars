@@ -1,7 +1,7 @@
-import ItemGrid from '../components/Inventory/ItemGrid.jsx';
-import Nav from '../components/Nav.jsx'
-import Footer from '../components/Footer.jsx'
-import { AppContext } from '../AppContext/context.jsx';
+import ItemGrid from '../components/Inventory/ItemGrid.js';
+import Nav from '../components/Nav.js'
+import Footer from '../components/Footer.js'
+import { AppContext } from '../AppContext/context.js';
 import { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css';
-import Avatar from './components/BattleRoom/Avatar.jsx';
-import BattleRoom from './pages/BattleRoom.jsx'
-import Home from './pages/Home.jsx'
-import Registration from './pages/Registration.jsx';
-import Inventory from './pages/Inventory.jsx';
+import Avatar from './components/BattleRoom/Avatar.js';
+import BattleRoom from './pages/BattleRoom.js'
+import Home from './pages/Home.js'
+import Registration from './pages/Registration.js';
+import Inventory from './pages/Inventory.js';
 import { Routes, Route } from 'react-router-dom';
 function App() {
   return (

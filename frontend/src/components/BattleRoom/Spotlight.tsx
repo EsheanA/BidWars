@@ -1,8 +1,8 @@
 
 import {useState, useEffect,useRef} from 'react'
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
-import Auctioneer from "./Auctioneer"
-import Item from "./Item"
+import Auctioneer from "./Auctioneer.js"
+import Item from "./Item.js"
 function Spotlight({item, announcement, highestBid, timer}) {
 
     const [visible, setVisible] = useState(true)
