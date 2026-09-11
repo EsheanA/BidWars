@@ -1,4 +1,12 @@
-function SignupForm({handleSubmit, username, setUsername, password, setPassword}){
+interface SignupFormProps{
+    handleSubmit: (e : React.SubmitEvent) => Promise<void>,
+    username: string,
+    setUsername: React.Dispatch<React.SetStateAction<string>>,
+    password: string,
+    setPassword: React.Dispatch<React.SetStateAction<string>>
+};
+
+function SignupForm({handleSubmit, username, setUsername, password, setPassword} : SignupFormProps){
     return(
         <form className = "signup" onSubmit={handleSubmit}>
             <h2>Signup</h2>

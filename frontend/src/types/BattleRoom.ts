@@ -1,3 +1,4 @@
+import { type User } from "./User.js"
 export namespace BR{
     export interface BidItem{
         name: string,
@@ -15,18 +16,18 @@ export namespace BR{
     }
 
     export interface HighestBidder{
-        userid: number,
+        userid: User["userid"],
         message: string
     };
 
     export interface CurrentBidPayload{
-        bidder_id: number;
+        bidder_id: string;
         bid_message: string;
         bid: number;
     }
 
     export interface UpdatedBalancePayload{
-        userid: number,
+        userid: User["userid"],
         balance: number
     }
 
@@ -36,17 +37,25 @@ export namespace BR{
     }
 
     export interface UserData{
-        userid: number,
+        userid: User["userid"],
         username: string
     }
 
     export type UserDataPayload = UserData;
 
-    interface User{
-        userid: number,
+    export interface User{
+        userid: string,
         username: string,
         active: boolean
     }
+
     export type Users = User[];
 
+    export interface UsersPayload{
+        userlist: Users;
+    }
+
+    export interface TokenPayload{
+        roomToken: string;
+    }
 }

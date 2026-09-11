@@ -6,17 +6,21 @@ import { useState, useEffect } from "react"
 import {AppContext} from '../AppContext/context.js';
 import {useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
+import {type User} from "../types/User.js"
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
-console.log(apiURL)
 function Registration(){
-    const [user, setUser] = useContext(AppContext)
-    const [username, setUsername] = useState("")
-    const [password, setPassword] = useState("")
-    const [toggle, setToggle] = useState(true)
-    const navigate = useNavigate()
+    const context = useContext(AppContext);
+    if(!context){
+        throw new Error('Inventory must be used inside AppProvider');
+    }
+    const { user, setUser } = context;
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [toggle, setToggle] = useState(true);
+    const navigate = useNavigate();
 
-    const handleSubmit = async(e)=>{
+    const handleSubmit = async(e : React.SubmitEvent)=>{
         e.preventDefault()
         const path = toggle ? "signup" : "login";
         if (username != "" && password != "") {
@@ -31,16 +35,13 @@ function Registration(){
                     body: JSON.stringify({ username, password}),
                 });
 
-                const data = await response.json();
-                console.log(data)
-                if (data.success) {
-                    if(toggle)
-                        setToggle(!toggle)
-                    else{
-                        const { username, userid, balance} = data;
-                        localStorage.setItem("userid", userid)
-                        setUser({ username, userid, balance});
-                    }
+                const data = await response.json() as User;
+                if(toggle)
+                    setToggle(!toggle)
+                else{
+                    const { username, userid, balance} = data;
+                    localStorage.setItem("userid", userid);
+                    setUser({ username, userid, balance});
                 }
 
             } catch (error) {

@@ -1,10 +1,18 @@
-import {useState, useEffect} from 'react'
 import ItemCard from './ItemCard.js'
-function ItemGrid({items, setItems}){
-    const itemLineup = items.map((item)=>
-            <ItemCard setItems = {setItems} name = {item.name} item_id = {item._id} value = {item.value} img_url = {item.img_url} quantity={item.amount} description = {item.description} rarity = {item.rarity} />
-    )
+import { type Inventory } from '../../types/Inventory.js';
 
+
+interface ItemGridProps{
+    items: Array<Inventory.Item>,
+    setItems: React.Dispatch<React.SetStateAction<Array<Inventory.Item>>>
+}
+function ItemGrid({items, setItems} : ItemGridProps){
+    const itemLineup = items.map((item)=>
+        <ItemCard 
+            setItems = {setItems} 
+            item = {item}
+        />
+    )
     return(
         <div className = "itemGrid">
             {itemLineup}

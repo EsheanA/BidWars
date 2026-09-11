@@ -1,32 +1,29 @@
 import Avatar from '../components/BattleRoom/Avatar.js';
 import Spotlight from '../components/BattleRoom/Spotlight.js';
-
+import { io, type Socket } from "socket.io-client"
 import {useState, useEffect, useRef} from 'react'
-import {io} from 'socket.io-client';
 import {AppContext} from '../AppContext/context.js'
 import {useContext} from 'react';
 import {useNavigate} from "react-router-dom"
 import { BR } from '../types/BattleRoom.js';
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
-
-
 function BattleRoom(){
         const navigate = useNavigate();
-        const socket = useRef(null);
+        const socket = useRef<Socket | null>(null);
         const context = useContext(AppContext);
         if(!context){
             throw new Error('BattleRoom must be used inside AppProvider');
         }
-        const {user, setUser} = context;
-        const [balance, setBalance] = useState(0)
-        const [itemForBid, setItemForBid] = useState<BR.BidItem | null>(null)
-        const [users, setUsers] = useState<BR.Users>([])
-        const [highestBid, setHighestBid] = useState(0)
-        const [highestBidder, setHighestBidder] = useState<BR.HighestBidder | null>(null)
-        const [timer, setTimer] = useState<number | null>(null)
-        const [announcement, setAnnouncement] = useState("")
-        const [bidOptions, setBidOptions] = useState<number[]>([])
+        const {user} = context;
+        const [balance, setBalance] = useState(0);
+        const [itemForBid, setItemForBid] = useState<BR.BidItem | null>(null);
+        const [users, setUsers] = useState<BR.Users>([]);
+        const [highestBid, setHighestBid] = useState(0);
+        const [highestBidder, setHighestBidder] = useState<BR.HighestBidder | null>(null);
+        const [timer, setTimer] = useState<number | null>(null);
+        const [announcement, setAnnouncement] = useState("");
+        const [bidOptions, setBidOptions] = useState<number[]>([]);
 
     useEffect(() => {
         let roomToken : string | null = localStorage.getItem("roomtoken");
@@ -43,26 +40,24 @@ function BattleRoom(){
                 auctionIndex: chosenAuction 
             }   
         })
-
+        if(socket.current === null)
+            return;
+        
         socket.current.connect()
 
-        socket.current.on("connect_error", (err) => {
+        socket.current.on("connect_error", (err : Error) => {
             console.error("Connection failed:", err.message); 
             navigate("/")
         });
 
-        socket.current.on("disconnect", (reason) => {
+        socket.current.on("disconnect", (reason : string) => {
             console.log("Disconnected:", reason);
-            navigate("/")
+            navigate("/");
         });
 
-        socket.current.on("room token", data => localStorage.setItem("roomtoken", data.roomToken))
+        socket.current.on("room token", (data : BR.TokenPayload) => localStorage.setItem("roomtoken", data.roomToken))
         
-        // socket.current.on("user data", (data : BR.UserDataPayload) => {
-        //     setUser({username: data.username, userid: data.id})
-        // })
-        
-        socket.current.on("user list", (data : BR.Users) => {
+        socket.current.on("user list", (data : BR.UsersPayload) => {
             console.log(data.userlist)
             setUsers(data.userlist)}
         )
@@ -89,7 +84,7 @@ function BattleRoom(){
         })
         socket.current.on("updated_balance", (data : BR.UpdatedBalancePayload) =>{
             console.log(user)
-            if(user && data.userid == user.userid){
+            if(user && data.userid === user.userid){
                 setBalance(data.balance)
                 console.log("balance: " + data.balance)
             }
@@ -103,8 +98,8 @@ function BattleRoom(){
         })
         
         return() =>{
-            socket.current.disconnect()
-            console.log("Socket disconnected")
+            socket.current?.disconnect();
+            console.log("Socket disconnected");
         }
 
     }, []);
@@ -122,23 +117,32 @@ function BattleRoom(){
     }
 
        useEffect(()=>{
+        if(timer === null)
+            return;
         if (timer > 0) {
             const timeout = setTimeout(() => {
-              setTimer(prev => prev - 1);
+              setTimer(prev => prev !== null ? prev - 1 : null);
             }, 1000);
             return () => clearTimeout(timeout);
           }
         }, [timer])
 
-    const makeBid = (value, player_id) =>{
-        if(itemForBid){
+    const makeBid = (value : number, player_id : number) : void =>{
+        if(itemForBid && socket.current !== null){
             socket.current.emit("bid", {userid: player_id, bid: highestBid+value})
         }
     }
 
     const renderUsers = users?.map((u) => {
         return(
-            <Avatar user = {u} active = {u.active} highestBidder = {highestBidder} makeBid = {(val, user) => makeBid(val, user)} name = {u.username} self = {u.userid === user.userid ? true: false} bidOptions = {bidOptions}/>
+            <Avatar 
+                user = {u} 
+                highestBidder = {highestBidder} 
+                makeBid = {(val : number, userid : number) => makeBid(val, userid)} 
+                name = {u.username} 
+                self = {u.userid === user?.userid ? true: false} 
+                bidOptions = {bidOptions}
+            />
         )
     })
     return(

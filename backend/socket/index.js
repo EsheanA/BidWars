@@ -60,8 +60,6 @@ async function initSocket(server, corsOpts) {
         }
         socket.on("disconnect", async() => {
             try{
-
-           
             console.log("left")
             if(await redisRoomHandler.checkGameStarted(roomID))
                 await redisRoomHandler.toggleUserActiveStatus(userID)

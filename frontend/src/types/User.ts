@@ -1,5 +1,8 @@
 export interface User{
-    userid: number,
+    userid: string,
     username: string,
     balance: number
 };
+
+
+

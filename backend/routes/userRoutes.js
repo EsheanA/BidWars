@@ -78,20 +78,18 @@ router.post('/logout', async (req, res) => {
 })
 
 router.post('/me', async (req, res) => {
-    const { userid } = req.body
-    const token = req.cookies[`token_${userid}`]
-    console.log(token)
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log(decoded)
-    if (decoded) {
-        const user = await User.findOne({ _id: userid });
+    try{
+        const { userid } = req.body;
+        const token = req.cookies[`token_${userid}`];
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const user = await User.findById(userid);
         res.status(200).json({ userid: user._id, username: user.username, balance: user.balance });
-    }
-    else {
-        res.status(401).json({ error: 'Invalid token' });
+
+    }catch(error){
+        return res.status(401).json({ error: 'Invalid or expired token' });
     }
 });
 

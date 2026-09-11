@@ -5,27 +5,17 @@ import AuctionCard from "./AuctionCard.js";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { type Home } from "../../types/Home.js";
 
-export default function SimpleSlider({setBackgroundColor}) {
+
+function SimpleSlider(
+  {
+    setBackgroundColor} : {setBackgroundColor : React.Dispatch<React.SetStateAction<string>>
+  }) {
 
   const [currentAuction, setCurrentAuction] = useState(0)
-  const [mainlineAuctions, setMainlineAuctions] = useState([])
-  const arr = [
-    {
-        name: "Garage",
-        image: "garage.png",
-        start: "0",
-        end: "250",
-        color: "grey"
-    },
-    {
-        name: "Suburbs",
-        image: "house.png",
-        start: "500",
-        end: "1000",
-        color: "white"
-    }
-  ]
+  const [mainlineAuctions, setMainlineAuctions] = useState<Array<Home.Auction>>([])
+
   useEffect(()=>{
     try{
       fetchAuctions()
@@ -35,21 +25,22 @@ export default function SimpleSlider({setBackgroundColor}) {
   }, []);
 
   useEffect(()=>{
-    if(mainlineAuctions && mainlineAuctions.length > 0)
-      setBackgroundColor(mainlineAuctions[currentAuction].color)
+    if(mainlineAuctions && mainlineAuctions.length >= currentAuction){
+      const auction = mainlineAuctions[currentAuction] as Home.Auction;
+      setBackgroundColor(auction?.color);
+    }
   }, [mainlineAuctions]);
 
   const fetchAuctions = async()=>{
       await fetch(`${apiURL}/auctions/`, {
         method: 'GET'
-      }).then(response => {
+      }).then((response) => {
         if(!response.ok){
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
-      }).then(data =>{
-        console.log(data)
-        setMainlineAuctions(data.auctions)
+      }).then((data : Home.AuctionListPayload) =>{
+        setMainlineAuctions(data.auctions);
       }).catch(error =>{
         console.error("Error fetching auction data: ", error)
       })
@@ -62,20 +53,19 @@ export default function SimpleSlider({setBackgroundColor}) {
     slidesToShow: 1,
     slidesToScroll: 1,
     variableWidth: false,
-    beforeChange: (current, next) => {
+    beforeChange: (current : number, next : number) => {
+      const next_auction = mainlineAuctions[next] as Home.Auction;
       console.log("Current slide:", current);
-      setBackgroundColor(mainlineAuctions[next].color);
+      setBackgroundColor(next_auction.color);
     },
-    afterChange: (index) => {
+    afterChange: (index : number) => {
       setCurrentAuction(index);
-    },
-    // nextArrow: <SampleNextArrow />,
-    // prevArrow: <SamplePrevArrow />
+    }
   };
 
   const auctions = mainlineAuctions?.map((auction, index)=>{
     return(
-      <AuctionCard name = {auction.name} image = {auction.image} start = {auction.start} end = {auction.end} items = {auction.items} index = {index}/>
+      <AuctionCard auction = {auction} index = {index}/>
     )
   })
 
@@ -85,3 +75,5 @@ export default function SimpleSlider({setBackgroundColor}) {
     </Slider>
   );
 }
+
+export default SimpleSlider;

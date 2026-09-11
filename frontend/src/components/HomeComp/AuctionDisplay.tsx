@@ -1,7 +1,7 @@
 import SimpleSlider from "./SimpleSlider.js"
 import {useState} from "react"
 function AuctionDisplay(){
-    const [backgroundColor, setBackgroundColor] = useState("black")
+    const [backgroundColor, setBackgroundColor] = useState("black");
     return(
         <div className="AuctionDisplay" 
             style={{

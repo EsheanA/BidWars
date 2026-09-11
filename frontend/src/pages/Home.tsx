@@ -2,32 +2,32 @@ import Nav from '../components/Nav.js';
 import Footer from '../components/Footer.js';
 import AuctionDisplay from '../components/HomeComp/AuctionDisplay.js';
 import './Pages.css';
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { AppContext } from '../AppContext/context.js';
 import { useContext } from 'react';
-import { useNavigate } from "react-router-dom"
+import {type User} from "../types/User.js";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 function Home() {
-    const navigate = useNavigate();
-    const [user, setUser] = useContext(AppContext)
+    const context = useContext(AppContext);
+    if(!context){
+        throw new Error('Home must be used inside AppProvider');
+    }
+    const {user, setUser} = context;
 
     useEffect(() => {
-        
         if (localStorage.getItem("roomtoken")) {
             localStorage.removeItem("roomtoken")
         }
-        // localStorage.clear();
         updateMe()
-
-    }, [])
+    }, []);
 
     const updateMe = async()=>{
             try {
                 const user_id = localStorage.getItem("userid")
-                if(user != null || user_id ){
+                if(user !== null || user_id ){
                     const endpoint = `${apiURL}/users/me`;
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -38,27 +38,27 @@ function Home() {
                         body: JSON.stringify({ userid: user ? user.userid : user_id}),
                     });
 
-                    const data = await response.json();
-                    if(data){
-                        const { username, userid, balance } = data;
-                        setUser({ username, userid, balance });
+                    if(!response.ok){
+                        setUser(null);
+                        return;
                     }
                     
-     
-            }
+                    const data = await response.json() as User;
+                    const { username, userid, balance } = data;
+                    setUser({ username, userid, balance });
+                }
             }catch(error) {
-                // console.error('Error fetching data:', error);
+                console.error('Error fetching data:', error);
             }
     }
 
     return (
         <div className="Home">
             <Nav />
-            <div className="Body">
-                <AuctionDisplay />
-            </div>
+                <div className="Body">
+                    <AuctionDisplay />
+                </div>
             <Footer />
-
         </div>
 
     )

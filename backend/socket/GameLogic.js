@@ -62,8 +62,6 @@ async function handleGameLogic(io, roomid) {
 
     let round = async () => {
       try{
-
-        
         const sockets = await io.in(roomid).fetchSockets();
         console.log("Round: ", current_round)
         const start = Date.now()

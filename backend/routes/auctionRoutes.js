@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
 
         const auctions = auctionData.auctions.mainline_auctions;
         const data = []
-        auctions.forEach(async(auction, index, arr) => {
+        auctions.forEach(async(auction, index) => {
             data[index] = {
                 name: auction.name,
                 image: auction.name+".png",

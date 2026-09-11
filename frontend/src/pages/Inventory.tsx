@@ -4,11 +4,17 @@ import Footer from '../components/Footer.js'
 import { AppContext } from '../AppContext/context.js';
 import { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { type Inventory } from '../types/Inventory.js';
 const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
 
 function Inventory() {
-    const [user, setUser] = useContext(AppContext)
-    const [items, setItems] = useState([])
+    const context = useContext(AppContext);
+    if(!context){
+        throw new Error('Inventory must be used inside AppProvider');
+    }
+    const { user } = context;
+
+    const [items, setItems] = useState<Array<Inventory.Item>>([]);
     const navigate = useNavigate()
     useEffect(() => {
         fetchItems()
@@ -30,10 +36,9 @@ function Inventory() {
                     console.error("Unexpected error:", response.status);
                     navigate("/")
                 }
-                const data = await response.json();
-                console.log(data)
-                const {itemList} = data;
-                setItems(itemList)
+                const data = await response.json() as Inventory.ItemListPayload;
+                const { itemList } = data;
+                setItems(itemList);
             }else{
                 navigate("/")
             }
@@ -46,8 +51,7 @@ function Inventory() {
     return (
         <div className="Inventory">
             <Nav />
-            <ItemGrid items = {items} setItems = {(x)=>setItems(x)}/>
-            
+            <ItemGrid items = {items} setItems = {setItems}/>
             <Footer />
         </div>
     )
