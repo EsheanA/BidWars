@@ -26,27 +26,26 @@ function Home() {
 
     const updateMe = async()=>{
             try {
-                const user_id = localStorage.getItem("userid")
-                if(user !== null || user_id ){
-                    const endpoint = `${apiURL}/users/me`;
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ userid: user ? user.userid : user_id}),
-                    });
+                const user_id = localStorage.getItem("userid");
+                const endpoint = `${apiURL}/users/me`;
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userid: user ? user.userid : user_id}),
+                });
 
-                    if(!response.ok){
-                        setUser(null);
-                        return;
-                    }
-                    
-                    const data = await response.json() as User;
-                    const { username, userid, balance } = data;
-                    setUser({ username, userid, balance });
+                if(!response.ok){
+                    setUser(null);
+                    return;
                 }
+                
+                const data = await response.json() as User;
+                const { username, userid, balance } = data;
+                setUser({ username, userid, balance });
+
             }catch(error) {
                 console.error('Error fetching data:', error);
             }

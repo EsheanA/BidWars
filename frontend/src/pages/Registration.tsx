@@ -18,6 +18,7 @@ function Registration(){
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [toggle, setToggle] = useState(true);
+    
     const navigate = useNavigate();
 
     const handleSubmit = async(e : React.SubmitEvent)=>{
