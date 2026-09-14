@@ -1,0 +1,74 @@
+import Nav from '../components/Nav.js'
+import Footer from '../components/Footer.js'
+import LoginForm from '../components/forms/LoginForm.js';
+import SignupForm from '../components/forms/SignupForm.js';
+import { useState, useEffect } from "react"
+import {AppContext} from '../AppContext/context.js';
+import {useContext} from 'react';
+import { useNavigate } from 'react-router-dom';
+import {type User} from "../types/User.js"
+const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+
+function Registration(){
+    const context = useContext(AppContext);
+    if(!context){
+        throw new Error('Inventory must be used inside AppProvider');
+    }
+    const { user, setUser } = context;
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [toggle, setToggle] = useState(true);
+    
+    const navigate = useNavigate();
+
+    const handleSubmit = async(e : React.SubmitEvent)=>{
+        e.preventDefault()
+        const path = toggle ? "signup" : "login";
+        if (username != "" && password != "") {
+            const endpoint = `${apiURL}/users/${path}`;
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password}),
+                });
+
+                const data = await response.json() as User;
+                if(toggle)
+                    setToggle(!toggle)
+                else{
+                    const { username, userid, balance} = data;
+                    localStorage.setItem("userid", userid);
+                    setUser({ username, userid, balance});
+                }
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+    }
+
+    useEffect(()=>{
+        if(user)
+            navigate("/")
+    }, [user])
+    
+    return(
+        <div className = "registration">
+            <Nav />
+            <div className= "formChoice">
+                <button className = "toggleForm" onClick = {()=> setToggle(!toggle)}>{!toggle ? "Sign Up?" : "Log In?"}</button>
+                {toggle 
+                ? <SignupForm username = {username} setUsername = {setUsername} password = {password} setPassword = {setPassword} handleSubmit = {handleSubmit}/> 
+                : <LoginForm  username = {username} setUsername = {setUsername} password = {password} setPassword = {setPassword} handleSubmit = {handleSubmit}/>}
+            </div>
+            <Footer />
+        </div>
+    )
+}
+
+export default Registration;
+
