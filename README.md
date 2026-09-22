@@ -11,7 +11,7 @@ Tech Stack
 * Frontend: React, Vite, Tailwind CSS, DaisyUI
 * Backend: Node.js, Express, Socket.IO
 * Data: MongoDB Atlas, Redis / Upstash
-* AI: Grok API, ElevenLabs TTS
+* AI: Grok API, Lemonfox TTS
 * Deployment: Vercel, Render
 
 Key Features
@@ -56,17 +56,19 @@ This project gave me hands-on experience with:
 
 Running Locally
 
+Clone the repository:
+```bash
 git clone <repository-url>
 cd BidWars
-
+```
 Install dependencies in the frontend and backend directories:
-
+```bash
 npm install
-
+```
 Configure the required environment variables, then run both development servers:
-
+```bash
 npm run dev
-
+```
 Author
 
 Eshean Arumainathan
