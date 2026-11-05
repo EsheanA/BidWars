@@ -34,7 +34,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 
         console.log("mainline auctions: ", auctions);
 
-        res.status(201).json({
+        res.status(200).json({
             success: true,
             auctions: data
         });

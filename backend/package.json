@@ -24,7 +24,9 @@
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "tsc",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "start": "node dist/server.js"
   },
   "author": "",
