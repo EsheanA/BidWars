@@ -24,6 +24,7 @@
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "tsc",
+    "test": "tsx --test tests/*.test.ts",
     "start": "node dist/server.js"
   },
   "author": "",
