@@ -17,7 +17,7 @@ export const validate = (req: Request, res: Response, next: NextFunction): void 
         };
 
         if(typeof username !== "string" ||
-            typeof password !== "string" || !username.trim() || password.length > 8){
+            typeof password !== "string" || !username.trim()){
                 res.status(400).json({error: "Invalid username or password"});
                 return;
             }
