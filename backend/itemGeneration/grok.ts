@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createWriteStream } from "fs";
 import { finished } from "stream/promises";
 import auctionData from "../auctions/auctionz.json";
+import { getAuction } from "../auctions/auctionIndex";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import { Readable } from "node:stream";
@@ -33,7 +34,7 @@ function chooseRarity(rarities : Array<string>, len : number) : string{
 async function callGrok(auctionIndex : number){
   try{
     //finds auction
-      const auction = auctionData.auctions.mainline_auctions[auctionIndex] as Auction;
+      const auction = getAuction(auctionIndex);
       const auction_name = auction.name;
       const value_range = auction.value_range;
 

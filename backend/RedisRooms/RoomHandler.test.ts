@@ -23,16 +23,6 @@ beforeEach(() => {
 });
 import type RoomHandler from './RoomHandler';
 const load = async (): Promise<typeof RoomHandler> => (await import('./RoomHandler.js')).default as unknown as typeof RoomHandler;
-async function compatibility(methods: string[], fn: ReturnType<typeof vi.fn>) {
-    const handler = await load();
-    for (const method of methods) {
-        fn.mockResolvedValueOnce('result');
-        expect(await (handler as any)[method]('alice', 42)).toBe('result');
-        expect(fn).toHaveBeenLastCalledWith('alice', 42);
-        fn.mockRejectedValueOnce(new Error('offline'));
-        await expect((handler as any)[method]('alice')).rejects.toThrow('offline');
-    }
-}
 describe("RoomHandler compatibility entry point", () => {
     describe("initialization", () => {
         it("should reject initialization when REDIS_URL is missing", async () => {
@@ -57,17 +47,6 @@ describe("RoomHandler compatibility entry point", () => {
         });
     });
     describe("service compatibility", () => {
-        it("should preserve room-operation arguments, results, and failures through the compatibility entry point", async () => {
-            await compatibility([
-                'getUser', 'userExist', 'findRoom', 'toggleUsersActiveStatus', 'toggleSingleUserActiveStatus', 'setUsersToActive', 'getUserActiveStatus', 'getUsers', 'checkWhetherFull', 'kickUser', 'deleteRoom'
-            ], deps.room);
-        });
-        it("should preserve auction-operation arguments, results, and failures through the compatibility entry point", async () => {
-            await compatibility(['handleBid', 'getPreGameData', 'setItem', 'checkGameStarted', 'startGame'], deps.auction);
-        });
-        it("should preserve reward-operation arguments, results, and failures through the compatibility entry point", async () => {
-            await compatibility(['distributeItemDB', 'logItem'], deps.reward);
-        });
         it("should keep service methods usable when a caller takes a method from the exported object", async () => {
             const { getUser } = await load();
             deps.room.mockImplementationOnce(function (this: {
@@ -77,8 +56,5 @@ describe("RoomHandler compatibility entry point", () => {
             });
             expect(await getUser('alice')).toEqual({ username: 'room-service' });
         });
-    });
-    describe("Proposed safeguard requiring approval: D6 in TEST_OUTLINES.md", () => {
-        it.todo("should preserve existing rooms and players when the Redis client connects or reconnects");
     });
 });

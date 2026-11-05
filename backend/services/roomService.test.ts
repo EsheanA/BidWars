@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { repository, room, user } from '../test-support/fixtures';
 import { RoomService } from './roomService';
@@ -109,14 +110,21 @@ describe("RoomService", () => {
             expect(harness.rooms.has('r1')).toBe(false);
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D2, D7 in TEST_OUTLINES.md", () => {
-        it.todo("should reject invalid auction indexes before changing any room or player state");
-        it.todo("should keep only room IDs in matchmaking queues when skipping unavailable rooms");
-        it.todo("should avoid adding the same player twice when a join is retried");
-        it.todo("should prevent overlapping joins from exceeding the room's player limit");
-        it.todo("should keep the room participant and stored player's active status synchronized in both directions");
-        it.todo("should make setting all players active use the same room key as other room operations");
-        it.todo("should distinguish a storage failure from a player that does not exist");
-        it.todo("should report failed room deletion or presence updates to the caller");
+    describe("Auction-index regressions", () => {
+        it("should reject invalid auction indexes before changing any room or player state", async () => {
+            for (const value of invalidInternalIndexes) {
+                await expect(service.findRoom('alice', 'Alice', value as number)).rejects.toThrow('Invalid auction index');
+            }
+            for (const operation of Object.values(harness.api))
+                expect(operation).not.toHaveBeenCalled();
+            expect(harness.rooms.get('r1')).toEqual(room());
+            expect(harness.users.get('alice')).toEqual(user());
+        });
     });
+});
+it.each(boundaryIndexes)('matchmakes a new room for boundary auction %s', async (index) => {
+    harness.api.popRoomQueue.mockResolvedValue(null);
+    const id = await service.findRoom('bob', 'Bob', index);
+    expect(harness.rooms.get(id)?.auctionIndex).toBe(index);
+    expect(harness.users.get('bob')?.roomid).toBe(id);
 });

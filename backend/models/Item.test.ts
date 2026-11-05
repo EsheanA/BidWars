@@ -29,9 +29,4 @@ describe("Item document validation", () => {
     it("should reject an invalid owner ID when an owner is supplied", async () => {
         expect(new Item({ ...data, owner: 'invalid' }).validateSync()?.errors).toHaveProperty('owner');
     });
-    describe("Proposed validation requiring approval: D10 in TEST_OUTLINES.md", () => {
-        it.todo("should require an owner for an inventory item");
-        it.todo("should reject zero, negative, or fractional inventory quantities");
-        it.todo("should reject negative or non-finite item values and winning bids");
-    });
 });

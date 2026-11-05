@@ -52,9 +52,4 @@ describe("server startup", () => {
         expect(deps.init).not.toHaveBeenCalled();
         expect(console.error).toHaveBeenCalledWith('Failed to start server:', expect.objectContaining({ message: 'offline' }));
     });
-    describe("Proposed safeguards requiring approval: D6 in TEST_OUTLINES.md", () => {
-        it.todo("should initialize room storage and socket handling before accepting connections");
-        it.todo("should leave no active listener when socket initialization fails");
-        it.todo("should handle a port-listening failure as a failed startup without leaving connected resources behind");
-    });
 });

@@ -16,7 +16,4 @@ describe("User document validation", () => {
         for (const balance of [undefined, 'nonnumeric'])
             expect(new User({ username: 'A', passwordHash: 'hash', balance }).validateSync()?.errors).toHaveProperty('balance');
     });
-    describe("Proposed validation requiring approval: D10 in TEST_OUTLINES.md", () => {
-        it.todo("should reject a negative or non-finite user balance");
-    });
 });

@@ -46,22 +46,6 @@ describe("RewardService", () => {
         });
     });
     describe("in-game round settlement", () => {
-        it("should deduct the winning bid from the stored in-game player balance", async () => {
-            await service.logItem('r1');
-            expect(harness.users.get('alice')!.balance).toBe(225);
-        });
-        it("should clear the current bidder and bid after settling the round", async () => {
-            await service.logItem('r1');
-            expect(harness.rooms.get('r1')!.itemData).toMatchObject({ bid: 0, bidder_id: '' });
-        });
-        it("should return the winning player ID and updated balance for broadcasting", async () => {
-            expect(await service.logItem('r1')).toEqual({ userid: 'alice', balance: 225 });
-        });
-        it("should leave other players' balances unchanged", async () => {
-            harness.users.set('bob', { ...user(), balance: 99 });
-            await service.logItem('r1');
-            expect(harness.users.get('bob')!.balance).toBe(99);
-        });
         it("should reject in-game settlement when the room, item, or winning player is missing", async () => {
             for (const missing of ['room', 'item', 'player']) {
                 harness = repository();
@@ -82,12 +66,11 @@ describe("RewardService", () => {
             }
         });
     });
-    describe("Proposed safeguards requiring approval: D4, D7 in TEST_OUTLINES.md", () => {
-        it.todo("should skip inventory writes and balance deductions when an item has no winner");
-        it.todo("should return no balance update for a round with no winner");
-        it.todo("should reject settlement for a missing or invalid winning bid");
-        it.todo("should report failed inventory queries, inventory saves, and persistent balance updates to the game loop");
-        it.todo("should prevent the next round from treating a partially persisted reward as settled");
-        it.todo("should avoid awarding or charging twice when settlement of the same round is retried");
-    });
+});
+it('settles the winner in game, returns their balance, and clears the round bid', async () => {
+    harness.users.set('bob', { ...user(), balance: 99 });
+    expect(await service.logItem('r1')).toEqual({ userid: 'alice', balance: 225 });
+    expect(harness.users.get('alice')!.balance).toBe(225);
+    expect(harness.users.get('bob')!.balance).toBe(99);
+    expect(harness.rooms.get('r1')!.itemData).toMatchObject({ bid: 0, bidder_id: '' });
 });

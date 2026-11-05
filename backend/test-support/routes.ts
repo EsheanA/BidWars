@@ -1,11 +1,11 @@
 import { vi } from 'vitest';
 import type { Router } from 'express';
 // Execute the actual registered middleware/handlers without opening an HTTP listener.
-export async function invoke(router: Router, path: string, method: string, body: unknown = {}) {
+export async function invoke(router: Router, path: string, method: string, body: unknown = {}, cookies: Record<string, string> = {}) {
     const route = router.stack.find((layer: any) => layer.route?.path === path && layer.route.methods[method])?.route;
     if (!route)
         throw new Error(`Missing route ${method} ${path}`);
-    const req: any = { body, cookies: {} };
+    const req: any = { body, cookies };
     const res: any = {
         statusCode: 200, body: undefined, status: vi.fn(function (this: any, n: number) {
             this.statusCode = n;

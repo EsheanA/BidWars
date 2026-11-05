@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidQueryIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { room, item, user, socket, socketServer } from '../test-support/fixtures';
 vi.mock('../RedisRooms/RoomHandler', () => ({ default: {
@@ -87,22 +88,48 @@ describe("socketAuth", () => {
                 expect(next).toHaveBeenCalledWith(expect.any(Error));
             }
         });
-        it("should complete the authentication callback exactly once on success or failure", async () => {
+    });
+    describe("Auction-index regressions", () => {
+        it("should normalize and accept a valid auction index including index zero", async () => {
+            for (const index of boundaryIndexes) {
+                s.handshake.query.auctionIndex = String(index);
+                s.handshake.headers.cookie = 'token_alice=' + token();
+                next.mockClear();
+                await socketAuth(s, next);
+                expect(next).toHaveBeenCalledExactlyOnceWith();
+                expect(s.auctionIndex).toBe(index);
+            }
+        });
+        it("should reject missing, nonnumeric, fractional, negative, array-valued, or out-of-range auction indexes for new players", async () => {
             s.handshake.headers.cookie = 'token_alice=' + token();
-            await socketAuth(s, next);
-            expect(next).toHaveBeenCalledTimes(1);
-            next.mockClear();
-            s.handshake.headers.cookie = '';
-            await socketAuth(s, next);
-            expect(next).toHaveBeenCalledTimes(1);
+            for (const value of invalidQueryIndexes) {
+                s.handshake.query.auctionIndex = value;
+                next.mockClear();
+                await socketAuth(s, next);
+                expect(next).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ message: expect.stringContaining('Invalid auction index') }));
+                expect(s.user).toBeUndefined();
+                expect(s.auctionIndex).toBeUndefined();
+            }
+            expect(h.checkGameStarted).not.toHaveBeenCalled();
+            expect(h.userExist).not.toHaveBeenCalled();
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D5 in TEST_OUTLINES.md", () => {
-        it.todo("should normalize and accept a valid auction index including index zero");
-        it.todo("should reject missing, nonnumeric, fractional, negative, array-valued, or out-of-range auction indexes for new players");
-        it.todo("should reject verified tokens whose required identity or room claims are missing or have invalid types");
-        it.todo("should reject an access token whose user ID differs from the supplied handshake user ID");
-        it.todo("should reject a room token when the player belongs to a different room");
-        it.todo("should prevent a room token from being used as an account access token and vice versa");
+});
+describe('auction selection during reconnect', () => {
+    it('allows an existing session without a new auction selection', async () => {
+        s.handshake.auth.roomToken = token({ userid: 'alice', roomid: 'r1' });
+        delete s.handshake.query.auctionIndex;
+        await socketAuth(s, next);
+        expect(next).toHaveBeenCalledExactlyOnceWith();
+        expect(s.session.roomid).toBe('r1');
+        expect(s.auctionIndex).toBeUndefined();
+    });
+    it('rejects an explicitly invalid reconnect selection before accessing room storage', async () => {
+        s.handshake.auth.roomToken = token({ userid: 'alice', roomid: 'r1' });
+        s.handshake.query.auctionIndex = ['0'];
+        await socketAuth(s, next);
+        expect(next).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ name: 'InvalidAuctionIndexError' }));
+        expect(h.checkGameStarted).not.toHaveBeenCalled();
+        expect(h.userExist).not.toHaveBeenCalled();
     });
 });

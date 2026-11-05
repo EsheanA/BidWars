@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { room, item, user, socket, socketServer } from '../test-support/fixtures';
 vi.mock('../RedisRooms/RoomHandler', () => ({ default: {
@@ -127,11 +128,26 @@ describe("initSocket and connection lifecycle", () => {
             expect(h.deleteRoom).not.toHaveBeenCalled();
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D2, D9 in TEST_OUTLINES.md", () => {
-        it.todo("should accept auction index zero consistently with the other valid auction indexes");
-        it.todo("should start at most one game loop when multiple players finish joining a full room together");
-        it.todo("should keep a player active when another authenticated socket for that player remains connected");
-        it.todo("should restore the current round state when a player reconnects during a game");
-        it.todo("should remove partial room membership when socket joining or room-token issuance fails");
+    describe("Auction-index regressions", () => {
+        it("should accept auction index zero consistently with the other valid auction indexes", async () => {
+            for (const index of boundaryIndexes) {
+                f.s.auctionIndex = index;
+                await join();
+                expect(h.findRoom).toHaveBeenLastCalledWith('alice', 'Alice', index);
+                expect(f.s.join).toHaveBeenCalledWith('r1');
+            }
+            expect(f.s.emit).not.toHaveBeenCalled();
+        });
     });
+});
+it('rejects invalid internal selections before matchmaking or joining', async () => {
+    for (const value of invalidInternalIndexes) {
+        f.s.auctionIndex = value as number;
+        await join();
+        expect(f.s.emit).toHaveBeenLastCalledWith('error message', expect.stringContaining('Invalid auction index'));
+    }
+    expect(h.findRoom).not.toHaveBeenCalled();
+    expect(f.s.join).not.toHaveBeenCalled();
+    expect(h.getUsers).not.toHaveBeenCalled();
+    expect(handleGameLogic).not.toHaveBeenCalled();
 });

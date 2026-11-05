@@ -1,7 +1,7 @@
 import type Room from "../RedisRooms/Room";
-import auctionData from "../auctions/auctionz.json";
+import { getAuction } from "../auctions/auctionIndex";
 import { RoomRepository } from "../repositories/roomRepository";
-import type { Auction, GrokItemResponse, Item } from "../types/Auction";
+import type { GrokItemResponse, Item } from "../types/Auction";
 
 type ItemGenerator = (auctionIndex: number) => Promise<string>;
 
@@ -41,8 +41,8 @@ export class AuctionService {
     async getPreGameData(roomId: string): Promise<string> {
         try {
             const room = await this.rooms.getRoom(roomId);
+            const auction = getAuction(room.auctionIndex);
             await this.generateRoomItem(roomId, room);
-            const auction = auctionData.auctions.mainline_auctions[room.auctionIndex] as Auction;
             return JSON.stringify({
                 rounds: room.rounds,
                 item_data: room.itemData,
@@ -78,6 +78,7 @@ export class AuctionService {
     async startGame(roomId: string): Promise<void> {
         try {
             const room = await this.rooms.getRoom(roomId);
+            getAuction(room.auctionIndex);
             room.in_progress = true;
             await this.rooms.saveRoom(roomId, room);
         } catch (error) {
@@ -87,6 +88,7 @@ export class AuctionService {
     }
 
     private async generateRoomItem(roomId: string, room: Room): Promise<Item> {
+        getAuction(room.auctionIndex);
         const data = await this.generateItem(room.auctionIndex);
         const { item, rarity, audio_url, img_url } = JSON.parse(data) as GrokItemResponse;
         room.itemData = {

@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generated } from '../test-support/fixtures';
 const deps = vi.hoisted(() => ({
@@ -96,15 +97,21 @@ describe("callGrok item and speech generation", () => {
             await expect(callGrok(0)).rejects.toThrow('disk full');
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D8 in TEST_OUTLINES.md", () => {
-        it.todo("should reject an invalid auction selection before calling either external provider");
-        it.todo("should select only rarities allowed by the agreed meaning of the auction's rarity limit");
-        it.todo("should reject a refused, null, or incomplete generated item before requesting speech");
-        it.todo("should reject generated monetary values outside the auction's agreed limits");
-        it.todo("should reject missing provider credentials before calling external services");
-        it.todo("should reject unsuccessful speech HTTP responses and responses without an audio body");
-        it.todo("should keep audio filenames inside the audio directory when generated names contain path separators");
-        it.todo("should reject source-stream errors without hanging or returning a successful audio URL");
-        it.todo("should clean up incomplete audio files when speech streaming fails");
+    describe("Auction-index regressions", () => {
+        it("should reject an invalid auction selection before calling either external provider", async () => {
+            for (const value of invalidInternalIndexes) {
+                await expect(callGrok(value as number)).rejects.toThrow('Invalid auction index');
+            }
+            expect(deps.parse).not.toHaveBeenCalled();
+            expect(fetchMock).not.toHaveBeenCalled();
+            expect(deps.write).not.toHaveBeenCalled();
+            expect(Math.random).not.toHaveBeenCalled();
+        });
     });
+});
+it.each(boundaryIndexes)('generates an item for boundary auction %s', async (index) => {
+    const result = JSON.parse(await callGrok(index));
+    expect(result.item).toEqual(generated.item);
+    expect(deps.parse).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
 });

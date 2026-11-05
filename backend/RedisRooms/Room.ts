@@ -1,8 +1,7 @@
 import { uuid } from 'uuidv4';
-import auctionData from "../auctions/auctionz.json";
+import { getAuction } from "../auctions/auctionIndex";
 import { type Item } from '../types/Auction';
 import { type RoomUser } from '../types/User';
-import { type Auction } from '../types/Auction';
 
 class Room{
     id: string;
@@ -18,6 +17,7 @@ class Room{
     itemData: Item | null;
     
     constructor(auctionName : string, auctionIndex : number){
+        getAuction(auctionIndex);
         this.id = uuid()
         this.users = [];
         this.auctionIndex = auctionIndex;
@@ -32,8 +32,7 @@ class Room{
     }
     
     setBidOptions(auctionIndex : number) : number[]{
-        const mainline_auctions = auctionData.auctions.mainline_auctions as Array<Auction>;
-        return(mainline_auctions[auctionIndex]?.bid_options as number[]);
+        return getAuction(auctionIndex).bid_options;
     }
 
    

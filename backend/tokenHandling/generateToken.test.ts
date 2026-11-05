@@ -60,7 +60,4 @@ describe("token generation", () => {
             expect(() => generateRoomAccessToken(user, 'r1')).toThrow('signing failed');
         });
     });
-    describe("Proposed safeguard requiring approval: D5 in TEST_OUTLINES.md", () => {
-        it.todo("should distinguish account access tokens from room access tokens with an enforceable token purpose");
-    });
 });

@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { repository, room, item, generated } from '../test-support/fixtures';
 import { AuctionService } from './auctionService';
@@ -52,23 +53,15 @@ describe("AuctionService", () => {
         });
     });
     describe("item preparation and game state", () => {
-        it("should prepare an item for the room's selected auction", async () => {
-            await service.setItem('r1');
-            expect(generate).toHaveBeenCalledWith(0);
-            expect(harness.rooms.get('r1')!.itemData!.name).toBe('Watch');
-        });
         it("should return pregame JSON containing rounds, item_data, max_balance, and bid_options", async () => {
             expect(JSON.parse(await service.getPreGameData('r1'))).toMatchObject({
                 rounds: 3, max_balance: 250, bid_options: [5, 10, 20], item_data: { name: 'Watch' }
             });
         });
-        it("should preserve generated item details, rarity, and media URLs when preparing an item", async () => {
-            const result = await service.setItem('r1');
-            expect(result).toEqual({ ...item, bidder_id: '' });
-        });
         it("should replace the previous item and reset its bidder and bid to the new starting state", async () => {
             harness.rooms.get('r1')!.itemData!.bid = 100;
-            expect(await service.setItem('r1')).toMatchObject({ bid: 25, bidder_id: '' });
+            expect(await service.setItem('r1')).toEqual({ ...item, bidder_id: '' });
+            expect(generate).toHaveBeenCalledWith(0);
         });
         it("should leave the stored room unchanged when item generation fails or returns invalid JSON", async () => {
             for (const fail of [true, false]) {
@@ -98,12 +91,27 @@ describe("AuctionService", () => {
             await expect(service.startGame('r1')).rejects.toThrow('offline');
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D3, D8 in TEST_OUTLINES.md", () => {
-        it.todo("should reject zero, negative, non-finite, and nonnumeric bids");
-        it.todo("should reject bids that do not exceed the current highest bid");
-        it.todo("should reject bids outside an active auction round");
-        it.todo("should retain the highest accepted bid when bid updates overlap");
-        it.todo("should reject generated items with missing fields or invalid monetary values before saving them");
-        it.todo("should reject a room with an invalid auction index before generating or saving an item");
+    describe("Auction-index regressions", () => {
+        it("should reject a room with an invalid auction index before generating or saving an item", async () => {
+            for (const value of invalidInternalIndexes) {
+                harness.rooms.get('r1')!.auctionIndex = value as number;
+                const before = structuredClone(harness.rooms.get('r1'));
+                await expect(service.getPreGameData('r1')).rejects.toThrow('Invalid auction index');
+                await expect(service.setItem('r1')).rejects.toThrow('Invalid auction index');
+                await expect(service.startGame('r1')).rejects.toThrow('Invalid auction index');
+                expect(harness.rooms.get('r1')).toEqual(before);
+            }
+            expect(generate).not.toHaveBeenCalled();
+            expect(harness.api.saveRoom).not.toHaveBeenCalled();
+            expect(harness.api.saveUser).not.toHaveBeenCalled();
+        });
     });
+});
+it.each(boundaryIndexes)('prepares items for boundary auction %s', async (index) => {
+    harness.rooms.get('r1')!.auctionIndex = index;
+    await service.getPreGameData('r1');
+    await service.setItem('r1');
+    expect(generate).toHaveBeenNthCalledWith(1, index);
+    expect(generate).toHaveBeenNthCalledWith(2, index);
+    expect(harness.rooms.get('r1')!.auctionIndex).toBe(index);
 });

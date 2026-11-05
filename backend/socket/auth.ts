@@ -2,6 +2,8 @@ import * as cookie from "cookie";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { Socket } from "socket.io";
 
+import { parseAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
+
 import redisRoomHandler from "../RedisRooms/RoomHandler";
 
 interface SessionPayload extends JwtPayload {
@@ -13,7 +15,7 @@ interface SessionPayload extends JwtPayload {
 interface AuthSocket extends Socket {
     session?: SessionPayload;
     user?: string | JwtPayload;
-    auctionIndex?: string;
+    auctionIndex?: number;
 }
 
 export const socketAuth = async (
@@ -27,6 +29,9 @@ export const socketAuth = async (
         };
 
         const { auctionIndex } = socket.handshake.query;
+        // Reconnects identify their existing room through the signed session.
+        const normalizedIndex = roomToken && auctionIndex === undefined
+            ? undefined : parseAuctionIndex(auctionIndex);
 
         const secret = process.env.ACCESS_TOKEN_SECRET;
 
@@ -54,8 +59,8 @@ export const socketAuth = async (
 
             socket.session = session;
 
-            if (typeof auctionIndex === "string") {
-                socket.auctionIndex = auctionIndex;
+            if (normalizedIndex !== undefined) {
+                socket.auctionIndex = normalizedIndex;
             }
 
             next();
@@ -80,14 +85,14 @@ export const socketAuth = async (
 
         socket.user = user;
 
-        if (typeof auctionIndex === "string") {
-            socket.auctionIndex = auctionIndex;
+        if (normalizedIndex !== undefined) {
+            socket.auctionIndex = normalizedIndex;
         }
 
         next();
 
     } catch (error) {
         console.error("Socket authentication error:", error);
-        next(new Error("Authentication error"));
+        next(error instanceof InvalidAuctionIndexError ? error : new Error("Authentication error"));
     }
 };

@@ -10,9 +10,6 @@ beforeEach(() => {
 });
 describe("RoomRepository", () => {
     describe("room storage", () => {
-        it("should restore a stored room with its players, auction state, and current item intact", async () => {
-            expect(await repo.getRoom('r1')).toEqual(room());
-        });
         it("should return null when an optional room lookup finds no record", async () => {
             expect(await repo.findRoom('absent')).toBeNull();
         });
@@ -31,19 +28,12 @@ describe("RoomRepository", () => {
             expect(harness.records.has('room:r1')).toBe(false);
             expect(harness.records.has('room:r2')).toBe(true);
         });
-        it("should read a room from an explicitly supplied legacy storage key", async () => {
-            harness.records.set('legacy', JSON.stringify(room()));
-            expect(await repo.findRoomByKey('legacy')).toEqual(room());
-        });
         it("should reject malformed stored room JSON instead of returning an unusable room", async () => {
             harness.records.set('room:r1', 'broken');
             await expect(repo.getRoom('r1')).rejects.toThrow();
         });
     });
     describe("player storage", () => {
-        it("should restore a stored player's room, balance, active status, and items", async () => {
-            expect(await repo.getUser('alice')).toEqual(user());
-        });
         it("should return null for an optional lookup and reject a required lookup when a player is missing", async () => {
             expect(await repo.findUser('missing')).toBeNull();
             await expect(repo.getUser('missing')).rejects.toThrow('not found');

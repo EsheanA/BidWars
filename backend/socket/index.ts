@@ -3,6 +3,8 @@ import { Server as HttpServer } from "http";
 import { CorsOptions } from "cors";
 import { JwtPayload } from "jsonwebtoken";
 
+import { assertAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
+
 import { socketAuth } from "./auth";
 import { handleGameLogic } from "./GameLogic";
 import redisRoomHandler from "../RedisRooms/RoomHandler";
@@ -69,9 +71,7 @@ async function initSocket(
                     throw new Error("Socket user is undefined");
                 }
 
-                if (!auctionIndex) {
-                    throw new Error("Auction index is undefined");
-                }
+                assertAuctionIndex(auctionIndex);
 
                 const { userid, username } = socket.user;
 
@@ -119,7 +119,7 @@ async function initSocket(
 
             socket.emit(
                 "error message",
-                "Room not found or full"
+                error instanceof InvalidAuctionIndexError ? error.message : "Room not found or full"
             );
         }
 

@@ -1,7 +1,6 @@
 import Room from "../RedisRooms/Room";
-import auctionData from "../auctions/auctionz.json";
+import { getAuction } from "../auctions/auctionIndex";
 import { RoomRepository } from "../repositories/roomRepository";
-import type { Auction } from "../types/Auction";
 import type { RedisUser, RoomUser } from "../types/User";
 
 export class RoomService {
@@ -27,9 +26,9 @@ export class RoomService {
 
     async findRoom(userId: string, username: string, auctionIndex: number): Promise<string> {
         try {
-            const auctions = auctionData.auctions.mainline_auctions as Auction[];
-            const auctionName = auctions[auctionIndex]?.name as string;
-            const balance = auctions[auctionIndex]?.value_range[1] as number;
+            const auction = getAuction(auctionIndex);
+            const auctionName = auction.name;
+            const balance = auction.value_range[1] as number;
             const queuedRoomId = await this.rooms.popRoomQueue(auctionName);
             const room = await this.rooms.findRoom(queuedRoomId);
 

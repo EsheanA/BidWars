@@ -26,14 +26,6 @@ const tick = () => vi.advanceTimersByTimeAsync(20000);
 const events = (name: string) => f.io.events.filter(e => e.event === name);
 describe("handleGameLogic", () => {
     describe("game and round progression", () => {
-        it("should announce the initial balance and bid options to the selected room", async () => {
-            await start();
-            expect(events('begin_game')).toEqual([{ room: 'r1', event: 'begin_game', data: { balance: 250, bidOptions: [5, 10, 20] } }]);
-        });
-        it("should mark the game started before opening its first bidding round", async () => {
-            await start();
-            expect(h.startGame.mock.invocationCallOrder[0]).toBeLessThan(h.toggleUsersActiveStatus.mock.invocationCallOrder[0]!);
-        });
         it("should publish the active player list and current item with a twenty-second round timer", async () => {
             await start();
             expect(events('user list')[0]!.data).toEqual({ userlist: room().users });
@@ -160,12 +152,9 @@ describe("handleGameLogic", () => {
             expect(vi.getTimerCount()).toBe(0);
         });
     });
-    describe("Proposed safeguards requiring approval: D3, D5, D9 in TEST_OUTLINES.md", () => {
-        it.todo("should derive the bidding player from the authenticated socket instead of trusting a submitted user ID");
-        it.todo("should reject a bid submitted through a socket outside the player's current room");
-        it.todo("should stop accepting bids while a round is settling and after the final round ends");
-        it.todo("should prevent a bid already in progress from changing an item after its round closes");
-        it.todo("should let a player who reconnects during a round receive updates and bid in that round");
-        it.todo("should cancel remaining round timers and bid handlers when a game is aborted or its room is removed");
-    });
+});
+it('starts the game and announces its initial bidding state before opening the round', async () => {
+    await start();
+    expect(events('begin_game')).toEqual([{ room: 'r1', event: 'begin_game', data: { balance: 250, bidOptions: [5, 10, 20] } }]);
+    expect(h.startGame.mock.invocationCallOrder[0]).toBeLessThan(h.toggleUsersActiveStatus.mock.invocationCallOrder[0]!);
 });

@@ -1,3 +1,4 @@
+import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { item } from '../test-support/fixtures';
 import Room from './Room';
@@ -8,23 +9,6 @@ beforeEach(() => {
 });
 describe("Room", () => {
     describe("initial room state", () => {
-        it("should create a distinct room ID for each room", async () => {
-            expect(new Room('Garage', 0).id).not.toBe(new Room('Garage', 0).id);
-        });
-        it("should retain the selected auction name and index", async () => {
-            expect(new Room('Garage', 0)).toMatchObject({ auction: 'Garage', auctionIndex: 0 });
-        });
-        it("should start with empty player and item lists and no current item", async () => {
-            expect(new Room('Garage', 0)).toMatchObject({ users: [], items: [], itemData: null });
-        });
-        it("should start with two available player slots, three rounds, and no active game", async () => {
-            expect(new Room('Garage', 0)).toMatchObject({
-                limit: 2, rounds: 3, in_progress: false, max: false
-            });
-        });
-        it("should load bid options for the selected auction", async () => {
-            expect(new Room('Garage', 0).bid_options).toEqual([5, 10, 20]);
-        });
         it("should keep each room's player and item lists independent", async () => {
             const a = new Room('Garage', 0), b = new Room('Garage', 0);
             a.users.push({ userid: 'x', username: 'X', active: true });
@@ -33,8 +17,28 @@ describe("Room", () => {
             expect(b.items).toEqual([]);
         });
     });
-    describe("Proposed safeguards requiring approval: D1, D2 in TEST_OUTLINES.md", () => {
-        it.todo("should reject an invalid auction index instead of creating a room with undefined bid options");
-        it.todo("should prevent changing one room's bid options from changing other rooms or the auction configuration");
+    describe("Auction-index regressions", () => {
+        it("should reject an invalid auction index instead of creating a room with undefined bid options", async () => {
+            for (const value of invalidInternalIndexes) {
+                expect(() => new Room('Garage', value as number)).toThrow('Invalid auction index');
+            }
+            expect(uuid).not.toHaveBeenCalled();
+            const existing = new Room('Garage', 0);
+            for (const value of invalidInternalIndexes) {
+                expect(() => existing.setBidOptions(value as number)).toThrow('Invalid auction index');
+            }
+            expect(existing.bid_options).toEqual([5, 10, 20]);
+        });
     });
+});
+it.each(boundaryIndexes)('constructs a room for boundary auction %s', index => {
+    const value = new Room('Selected auction', index);
+    expect(value.auctionIndex).toBe(index);
+    expect(value.bid_options.length).toBeGreaterThan(0);
+});
+it('initializes an independent waiting room with the selected auction defaults', () => {
+    const first = new Room('Garage', 0);
+    const second = new Room('Garage', 0);
+    expect(first.id).not.toBe(second.id);
+    expect(first).toMatchObject({ auction: 'Garage', auctionIndex: 0, users: [], items: [], itemData: null, limit: 2, rounds: 3, in_progress: false, max: false, bid_options: [5, 10, 20] });
 });
