@@ -3,3 +3,5 @@ node_modules
 ollama
 .DS_Store
 ./.DS_Store
+coverage/
+TEST_OUTLINES.md

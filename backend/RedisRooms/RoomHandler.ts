@@ -16,8 +16,6 @@ if (!redisUrl) {
 const client = createClient({ url: redisUrl });
 client.on("connect", async () => {
     console.log("RedisRoomHandler connected to Redis");
-    await client.flushDb();
-    console.log("Redis database cleared successfully.");
 });
 client.on("error", (error: Error) => {
     console.error("Redis error", error);
