@@ -13,6 +13,12 @@ export namespace BR{
     export interface SetItemPayload{
         item: BidItem & {bid: number};
         timer: number;
+        timing?: {
+            roomId: string;
+            round: number;
+            transitionId?: string;
+            completedRound?: number;
+        };
     }
 
     export interface HighestBidder{

@@ -34,7 +34,7 @@ describe("handleGameLogic", () => {
         it("should publish the active player list and current item with a twenty-second round timer", async () => {
             await start();
             expect(events('user list')[0]!.data).toEqual({ userlist: room().users });
-            expect(JSON.parse(events('setItem')[0]!.data)).toEqual({ item, timer: 20 });
+            expect(JSON.parse(events('setItem')[0]!.data)).toEqual({ item, timer: 20, timing: {roomId: 'r1', round: 1} });
         });
         it("should reuse the prepared item for the first round and generate a new item for each later round", async () => {
             await start();
@@ -84,6 +84,14 @@ describe("handleGameLogic", () => {
 
             expect(events('setItem')).toHaveLength(3);
             expect(generate).toHaveBeenCalledTimes(3);
+            const summaries = vi.mocked(console.log).mock.calls
+                .map(([line]) => typeof line === 'string' && line.startsWith('{') ? JSON.parse(line) : null)
+                .filter(entry => entry?.event === 'round.transition.completed');
+            expect(summaries).toHaveLength(2);
+            for (const [index, summary] of summaries.entries()) {
+                expect(summary).toMatchObject({roomId: 'r1', completedRound: index + 1, nextRound: index + 2, hadWinner: false, status: 'success'});
+                expect(JSON.parse(events('setItem')[index + 1]!.data).timing.transitionId).toBe(summary.transitionId);
+            }
             expect(events('updated_balance')).toEqual([]);
             expect(harness.users.get('alice')!.balance).toBe(250);
             expect(inventoryLookup).not.toHaveBeenCalled();

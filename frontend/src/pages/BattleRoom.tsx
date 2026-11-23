@@ -24,6 +24,13 @@ function BattleRoom(){
         const [timer, setTimer] = useState<number | null>(null);
         const [announcement, setAnnouncement] = useState("");
         const [bidOptions, setBidOptions] = useState<number[]>([]);
+        const activeRound = useRef<{roomId: string; round: number} | null>(null);
+        const countdownZero = useRef<{roomId: string; round: number; at: number} | null>(null);
+        const clientId = useRef<string | null>(null);
+        if (clientId.current === null) clientId.current = crypto.randomUUID();
+        const timingLogsEnabled = import.meta.env.VITE_ROUND_TIMING_LOGS === 'true' ||
+            (import.meta.env.DEV && import.meta.env.VITE_ROUND_TIMING_LOGS !== 'false');
+
 
     useEffect(() => {
         let roomToken : string | null = localStorage.getItem("roomtoken");
@@ -63,7 +70,22 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", (data : string) => {
+            const receivedAt = performance.now();
             const parsedData = JSON.parse(data) as BR.SetItemPayload;
+            const timing = parsedData.timing;
+            if (timing?.transitionId && timingLogsEnabled) {
+                const zero = countdownZero.current;
+                const observedZero = zero !== null && zero.roomId === timing.roomId && zero.round === timing.completedRound;
+                console.info(JSON.stringify({
+                    timestamp: new Date().toISOString(), level: 'info', event: 'round.transition.received',
+                    clientId: clientId.current, roomId: timing.roomId, transitionId: timing.transitionId,
+                    completedRound: timing.completedRound, round: timing.round,
+                    countdownZeroToItemReceivedMs: observedZero ? Math.round((receivedAt - zero.at) * 100) / 100 : null,
+                    ...(observedZero ? {} : {reason: 'countdownZeroNotObserved'}),
+                }));
+            }
+            activeRound.current = timing ? {roomId: timing.roomId, round: timing.round} : null;
+            countdownZero.current = null;
             const {name, value, description, audio_url, img_url, bid, range, rarity} = parsedData.item;
             setItemForBid({name, value, description, audio_url, img_url, range, rarity});
             setHighestBidder(null);
@@ -119,6 +141,9 @@ function BattleRoom(){
        useEffect(()=>{
         if(timer === null)
             return;
+        if (timer === 0 && activeRound.current && countdownZero.current === null) {
+            countdownZero.current = {...activeRound.current, at: performance.now()};
+        }
         if (timer > 0) {
             const timeout = setTimeout(() => {
               setTimer(prev => prev !== null ? prev - 1 : null);

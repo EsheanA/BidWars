@@ -13,6 +13,8 @@ function isolateServices() {
     vi.spyOn(mongoose.Query.prototype, 'exec').mockImplementation(forbidden);
     vi.spyOn(mongoose.Model.prototype, 'save').mockImplementation(forbidden);
     vi.stubGlobal('fetch', vi.fn(forbidden));
+    vi.stubEnv('ROUND_TIMING_LOGS', 'true');
+    vi.stubEnv('ROUND_TIMING_DETAILS', 'false');
     for (const key of ['MONGODB_URI', 'REDIS_URL', 'GROK_KEY', 'LEMON_FOX_KEY', 'ACCESS_TOKEN_SECRET'])
         vi.stubEnv(key, 'unit-test-only');
     vi.spyOn(console, 'log').mockImplementation(() => {

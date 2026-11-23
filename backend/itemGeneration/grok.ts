@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { measureRoundStage } from "../logging/roundTiming";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { createWriteStream } from "fs";
@@ -62,7 +63,8 @@ async function callGrok(auctionIndex : number){
           starting_bid: z.number()
         });
         
-        const response = await client.chat.completions.parse({
+        const schema = await measureRoundStage("itemGeneration", async () => {
+      const response = await client.chat.completions.parse({
           model: "grok-3-mini",
           messages: [
             {
@@ -93,10 +95,12 @@ async function callGrok(auctionIndex : number){
       if (!choice) {
         throw new Error("No completion choice returned");
       }
-      const schema  = choice.message.parsed;
-      console.log(schema);
+      return choice.message.parsed;
+      });
+
       
 
+      return await measureRoundStage("audioGeneration", async () => {
       const responseTTS = await fetch("https://api.lemonfox.ai/v1/audio/speech", {
         method: "POST",
         headers: {
@@ -118,6 +122,7 @@ async function callGrok(auctionIndex : number){
       const body = responseTTS.body as NodeReadableStream<Uint8Array>;
       await finished(Readable.fromWeb(body).pipe(fileStream));
       return(Promise.resolve(JSON.stringify({item: schema, category, rarity, audio_url: `audioFiles/${filename}_${unique}.mp3`, img_url: `${category}.svg`})))
+      });
     }catch(error){
       console.error("Grok call failed: ", error)
       return(Promise.reject(error))

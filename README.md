@@ -69,3 +69,44 @@ Configure the required environment variables, then run both development servers:
 ```bash
 npm run dev
 ```
+
+Round-transition timing
+
+From the project root, start the backend with detailed structured stage logging:
+
+```sh
+ROUND_TIMING_DETAILS=true npm run dev --prefix backend
+```
+
+Start the frontend normally in another terminal, then play using the two
+Playwright windows. Browser timing logs are enabled in Vite development mode.
+In each browser's developer console, filter for `round.transition.received`.
+Match its `transitionId` with the backend's `round.transition.completed` JSON line.
+
+The backend summary reports `durationMs` from the round-timer callback until the
+next item is emitted. Its exclusive breakdown contains `settlementMs`,
+`itemGenerationMs`, `audioGenerationMs` (through completed MP3 writing), and
+`otherMs` (remaining preparation/storage/broadcast work). Stage-start/completion
+entries show where an unfinished transition is waiting. Failures emit
+`round.transition.failed` with the stage, elapsed time, and error type; these
+structured entries omit error messages, tokens, provider payloads, and item text.
+A swallowed persistence error is marked failed rather than logged as a successful
+transition; existing settlement behavior itself is unchanged.
+
+The first item is startup and has no between-round summary. Final settlement is
+reported as `round.completed` with `nextRound: null`, not as delivery of another
+item. `hadWinner` is null until the settlement result is known, then true/false.
+
+Browser `countdownZeroToItemReceivedMs` uses that browser's own monotonic clock,
+from observing its previous countdown at zero to receipt of the next item. It is
+not animation completion or a measurement of network latency alone. Background
+tabs can have throttled countdowns; if zero was not observed for the matching
+room/round, the measurement is null with `reason: "countdownZeroNotObserved"`.
+Each window has an ephemeral `clientId`; no account identity is logged here.
+
+Backend summaries/start/failure entries are on by default. Set
+`ROUND_TIMING_DETAILS=true` for per-stage entries or `ROUND_TIMING_LOGS=false` to
+disable backend timing output. Set `VITE_ROUND_TIMING_LOGS=false` to disable browser
+logs (or `true` to enable them outside development). Restart the relevant dev
+server after changing environment settings. Logging does not prefetch items or
+change provider requests, bidding rules, or round durations.

@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { currentRoundTiming } from "../logging/roundTiming";
 import ItemModel from "../models/Item";
 import User from "../models/User";
 import { RoomRepository } from "../repositories/roomRepository";
@@ -35,6 +36,7 @@ export class RewardService {
             }
             await User.findByIdAndUpdate(bidder_id, { $inc: { balance: -1 * bid } });
         } catch (error) {
+            currentRoundTiming()?.fail(error);
             console.error("Error distributing item: ", error);
         }
     }

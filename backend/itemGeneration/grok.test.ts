@@ -115,3 +115,16 @@ it.each(boundaryIndexes)('generates an item for boundary auction %s', async (ind
     expect(deps.parse).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledOnce();
 });
+
+import { RoundTiming, withRoundTiming } from '../logging/roundTiming';
+it('attributes provider and completed audio work to the same round transition', async () => {
+    vi.stubEnv('ROUND_TIMING_DETAILS', 'true');
+    const timing = new RoundTiming('room-a', 1, 2);
+    await withRoundTiming(timing, () => callGrok(0));
+    timing.complete();
+    const logs = vi.mocked(console.log).mock.calls
+        .map(([line]) => typeof line === 'string' && line.startsWith('{') ? JSON.parse(line) : null)
+        .filter(log => log?.event === 'round.transition.stage.completed');
+    expect(logs.map(log => log.stage)).toEqual(['itemGeneration', 'audioGeneration']);
+    expect(logs.every(log => log.roomId === 'room-a' && log.transitionId === timing.transitionId)).toBe(true);
+});
