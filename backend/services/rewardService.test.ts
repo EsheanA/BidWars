@@ -16,6 +16,22 @@ beforeEach(() => {
     charge = vi.spyOn(User, 'findByIdAndUpdate').mockResolvedValue(null);
 });
 describe("RewardService", () => {
+    it.each(['', null])('skips all reward and balance work when the bidder is %j', async bidderId => {
+        // Legacy Redis records may contain null despite the current string type.
+        harness.rooms.get('r1')!.itemData!.bidder_id = bidderId as string;
+        const before = structuredClone(harness.rooms.get('r1'));
+
+        await service.distributeItemDB('r1');
+        expect(await service.logItem('r1')).toEqual({ balance: null, userid: null });
+
+        for (const operation of [find, update, save, charge, harness.api.getUser,
+            harness.api.saveUser, harness.api.saveRoom]) {
+            expect(operation).not.toHaveBeenCalled();
+        }
+        expect(harness.rooms.get('r1')).toEqual(before);
+        expect(harness.users.get('alice')!.balance).toBe(250);
+        expect(console.error).not.toHaveBeenCalled();
+    });
     describe("persistent inventory and balances", () => {
         it("should create the winner's first copy of an item with its ownership, value, rarity, bid, and media details", async () => {
             harness.rooms.get('r1')!.itemData!.bidder_id = '507f1f77bcf86cd799439011';

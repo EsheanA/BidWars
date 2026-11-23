@@ -15,7 +15,7 @@ export class RewardService {
             const {
                 name, value, description, img_url, audio_url, bidder_id, bid, rarity
             } = room.itemData;
-            if (bidder_id === null) {
+            if (bidder_id === null || bidder_id === "") {
                 return;
             }
             if (bid === null) {
@@ -47,7 +47,7 @@ export class RewardService {
                 throw new Error(`Item data of room ${roomId} not found`);
             }
             const userId: string | null = item.bidder_id;
-            if (userId === null) {
+            if (userId === null || userId === "") {
                 return { balance: null, userid: null };
             }
             const user = await this.rooms.getUser(userId);

@@ -6,6 +6,11 @@ vi.mock('../RedisRooms/RoomHandler', () => ({ default: {
 import handler from '../RedisRooms/RoomHandler';
 const h = vi.mocked(handler);
 import { handleGameLogic } from './GameLogic';
+import { AuctionService } from '../services/auctionService';
+import { RewardService } from '../services/rewardService';
+import { generated, repository } from '../test-support/fixtures';
+import ItemModel from '../models/Item';
+import UserModel from '../models/User';
 let f: ReturnType<typeof socketServer>;
 beforeEach(() => {
     vi.useFakeTimers();
@@ -58,11 +63,38 @@ describe("handleGameLogic", () => {
             await tick();
             expect(events('updated_balance')[0]).toEqual({ room: 'r1', event: 'updated_balance', data: { userid: 'alice', balance: 225 } });
         });
-        it("should omit a balance broadcast when settlement returns no winning player", async () => {
-            h.logItem.mockResolvedValue({ userid: null, balance: null });
+        it("completes three no-bid rounds using real settlement without awarding or charging", async () => {
+            const harness = repository();
+            const generate = vi.fn(async () => JSON.stringify(generated));
+            const auctions = new AuctionService(harness.dependency, generate);
+            const rewards = new RewardService(harness.dependency);
+            const inventoryLookup = vi.spyOn(ItemModel, 'findOne').mockRejectedValue(new Error('Unexpected inventory lookup'));
+            const charge = vi.spyOn(UserModel, 'findByIdAndUpdate').mockRejectedValue(new Error('Unexpected charge'));
+            h.getPreGameData.mockImplementation(auctions.getPreGameData.bind(auctions));
+            h.startGame.mockImplementation(auctions.startGame.bind(auctions));
+            h.setItem.mockImplementation(auctions.setItem.bind(auctions));
+            h.distributeItemDB.mockImplementation(rewards.distributeItemDB.bind(rewards));
+            h.logItem.mockImplementation(rewards.logItem.bind(rewards));
+
             await start();
             await tick();
+            expect(events('setItem')).toHaveLength(2);
+            await tick();
+            await tick();
+
+            expect(events('setItem')).toHaveLength(3);
+            expect(generate).toHaveBeenCalledTimes(3);
             expect(events('updated_balance')).toEqual([]);
+            expect(harness.users.get('alice')!.balance).toBe(250);
+            expect(inventoryLookup).not.toHaveBeenCalled();
+            expect(charge).not.toHaveBeenCalled();
+            expect(harness.api.getUser).not.toHaveBeenCalled();
+            expect(harness.api.saveUser).not.toHaveBeenCalled();
+            expect(f.disconnected).not.toHaveBeenCalled();
+            await vi.advanceTimersByTimeAsync(6000);
+            expect(f.disconnected).toHaveBeenCalledOnce();
+            expect(vi.getTimerCount()).toBe(0);
+            expect(console.error).not.toHaveBeenCalled();
         });
         it("should finish after the configured number of rounds without generating an extra item", async () => {
             await start();
