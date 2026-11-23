@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { room, item, user, socket, socketServer } from '../test-support/fixtures';
 vi.mock('../RedisRooms/RoomHandler', () => ({ default: {
-        initClient: vi.fn(), getPreGameData: vi.fn(), startGame: vi.fn(), toggleUsersActiveStatus: vi.fn(), handleBid: vi.fn(), distributeItemDB: vi.fn(), logItem: vi.fn(), setItem: vi.fn(), getUser: vi.fn(), toggleSingleUserActiveStatus: vi.fn(), findRoom: vi.fn(), getUsers: vi.fn(), checkWhetherFull: vi.fn(), checkGameStarted: vi.fn(), kickUser: vi.fn(), deleteRoom: vi.fn(), userExist: vi.fn()
+        initClient: vi.fn(), getPreGameData: vi.fn(), startGame: vi.fn(), toggleUsersActiveStatus: vi.fn(), handleBid: vi.fn(), distributeItemDB: vi.fn(), logItem: vi.fn(), setItem: vi.fn(), prepareItem: vi.fn(), activatePreparedItem: vi.fn(), discardPreparedItem: vi.fn(), getUser: vi.fn(), toggleSingleUserActiveStatus: vi.fn(), findRoom: vi.fn(), getUsers: vi.fn(), checkWhetherFull: vi.fn(), checkGameStarted: vi.fn(), kickUser: vi.fn(), deleteRoom: vi.fn(), userExist: vi.fn()
     } }));
 import handler from '../RedisRooms/RoomHandler';
 const h = vi.mocked(handler);
-import { handleGameLogic } from './GameLogic';
+import { handleGameLogic, cancelAbandonedGame } from './GameLogic';
 import { AuctionService } from '../services/auctionService';
 import { RewardService } from '../services/rewardService';
-import { generated, repository } from '../test-support/fixtures';
+import { generated, repository, deferred } from '../test-support/fixtures';
 import ItemModel from '../models/Item';
 import UserModel from '../models/User';
 let f: ReturnType<typeof socketServer>;
@@ -21,10 +21,17 @@ beforeEach(() => {
     }));
     h.startGame.mockResolvedValue();
     h.toggleUsersActiveStatus.mockResolvedValue(room().users);
-    h.setItem.mockResolvedValue({ ...item, name: 'Next' });
+    h.prepareItem.mockImplementation(async context => ({ ...context, auctionIndex: 0, item: { ...item, name: 'Next' } }));
+    h.activatePreparedItem.mockImplementation(async (_context, prepared) => prepared.item);
+    h.discardPreparedItem.mockResolvedValue();
     h.logItem.mockResolvedValue({ userid: 'alice', balance: 225 });
     h.distributeItemDB.mockResolvedValue();
     h.handleBid.mockResolvedValue({ userid: 'alice', roomid: 'r1', bid: 50 });
+});
+afterEach(async () => {
+    f.s.rooms.clear();
+    cancelAbandonedGame(f.io as any, 'r1');
+    await Promise.resolve();
 });
 const start = () => handleGameLogic(f.io as any, 'r1');
 const tick = () => vi.advanceTimersByTimeAsync(20000);
@@ -34,14 +41,17 @@ describe("handleGameLogic", () => {
         it("should publish the active player list and current item with a twenty-second round timer", async () => {
             await start();
             expect(events('user list')[0]!.data).toEqual({ userlist: room().users });
-            expect(JSON.parse(events('setItem')[0]!.data)).toEqual({ item, timer: 20 });
+            expect(JSON.parse(events('setItem')[0]!.data)).toMatchObject({ item, timer: 20 });
         });
-        it("should reuse the prepared item for the first round and generate a new item for each later round", async () => {
+        it("should start preparing during bidding and activate the existing result at the boundary", async () => {
             await start();
-            expect(h.setItem).not.toHaveBeenCalled();
+            expect(h.prepareItem).toHaveBeenCalledOnce();
+            expect(h.activatePreparedItem).not.toHaveBeenCalled();
             await tick();
             expect(JSON.parse(events('setItem')[1]!.data).item.name).toBe('Next');
-            expect(h.setItem).toHaveBeenCalledOnce();
+            expect(h.activatePreparedItem).toHaveBeenCalledOnce();
+            expect(h.prepareItem).toHaveBeenCalledTimes(2);
+            expect(h.activatePreparedItem.mock.calls[0]![0]).toEqual(h.prepareItem.mock.calls[0]![0]);
         });
         it("should leave the current round open until its timer expires", async () => {
             await start();
@@ -66,13 +76,18 @@ describe("handleGameLogic", () => {
         it("completes three no-bid rounds using real settlement without awarding or charging", async () => {
             const harness = repository();
             const generate = vi.fn(async () => JSON.stringify(generated));
-            const auctions = new AuctionService(harness.dependency, generate);
+            const auctions = new AuctionService(harness.dependency, generate, {
+                generateDraft: vi.fn(async () => { generate(); return generated; }),
+                generateAudio: vi.fn(async () => generated.audio_url), discardAudio: vi.fn(async () => {})
+            });
             const rewards = new RewardService(harness.dependency);
             const inventoryLookup = vi.spyOn(ItemModel, 'findOne').mockRejectedValue(new Error('Unexpected inventory lookup'));
             const charge = vi.spyOn(UserModel, 'findByIdAndUpdate').mockRejectedValue(new Error('Unexpected charge'));
             h.getPreGameData.mockImplementation(auctions.getPreGameData.bind(auctions));
             h.startGame.mockImplementation(auctions.startGame.bind(auctions));
-            h.setItem.mockImplementation(auctions.setItem.bind(auctions));
+            h.prepareItem.mockImplementation(auctions.prepareItem.bind(auctions));
+            h.activatePreparedItem.mockImplementation(auctions.activatePreparedItem.bind(auctions));
+            h.discardPreparedItem.mockImplementation(auctions.discardPreparedItem.bind(auctions));
             h.distributeItemDB.mockImplementation(rewards.distributeItemDB.bind(rewards));
             h.logItem.mockImplementation(rewards.logItem.bind(rewards));
 
@@ -102,7 +117,7 @@ describe("handleGameLogic", () => {
             await tick();
             await tick();
             expect(events('setItem')).toHaveLength(3);
-            expect(h.setItem).toHaveBeenCalledTimes(2);
+            expect(h.prepareItem).toHaveBeenCalledTimes(2);
         });
         it("should disconnect only that room's sockets after the six-second game-over delay", async () => {
             await start();
@@ -160,12 +175,12 @@ describe("handleGameLogic", () => {
             expect(events('setItem')).toEqual([]);
             expect(vi.getTimerCount()).toBe(0);
         });
-        it("should stop round progression when game startup or item preparation fails", async () => {
+        it("should stop progression when startup fails or preparation cannot continue", async () => {
             h.startGame.mockRejectedValueOnce(new Error('offline'));
             await start();
             expect(events('setItem')).toHaveLength(0);
+            h.prepareItem.mockRejectedValueOnce(new Error('preparation cancelled'));
             await start();
-            h.setItem.mockRejectedValueOnce(new Error('generation'));
             await tick();
             expect(events('setItem')).toHaveLength(1);
             expect(vi.getTimerCount()).toBe(0);
@@ -207,4 +222,93 @@ it.each(['no identity', 'wrong bound room', 'left room'])('rejects a bid with %s
     await vi.advanceTimersByTimeAsync(0);
     expect(h.handleBid).not.toHaveBeenCalled();
     expect(events('current bid')).toEqual([]);
+});
+
+it('continues accepting authorized bids during preparation, then waits for the same operation with bidding closed', async () => {
+    const next = deferred<Awaited<ReturnType<typeof handler.prepareItem>>>();
+    h.prepareItem.mockReturnValueOnce(next.promise);
+    await start();
+    await f.s.handlers.get('bid')!({ bid: 50 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.handleBid).toHaveBeenCalledOnce();
+    await tick();
+    expect(h.logItem).toHaveBeenCalledOnce();
+    expect(h.activatePreparedItem).not.toHaveBeenCalled();
+    expect(events('setItem')).toHaveLength(1);
+    expect(events('round status')[0]!.data.state).toBe('preparing');
+    expect(h.prepareItem).toHaveBeenCalledOnce();
+    await f.s.handlers.get('bid')!({ bid: 75 });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(h.handleBid).toHaveBeenCalledOnce();
+    const context = h.prepareItem.mock.calls[0]![0];
+    next.resolve({ ...context, auctionIndex: 0, item: { ...item, name: 'Prepared' } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(events('setItem')).toHaveLength(2);
+    expect(h.prepareItem).toHaveBeenCalledTimes(2); // Only now prepare round three.
+    expect(h.activatePreparedItem).toHaveBeenCalledOnce();
+    expect(h.logItem.mock.invocationCallOrder[0]).toBeLessThan(h.activatePreparedItem.mock.invocationCallOrder[0]!);
+    expect(JSON.parse(events('setItem')[1]!.data)).toMatchObject({ timing: context, item: { name: 'Prepared' } });
+});
+
+it.each(['ready', 'pending'])('cancels %s preparation when the last socket leaves and discards unused media', async state => {
+    const next = deferred<Awaited<ReturnType<typeof handler.prepareItem>>>();
+    if (state === 'pending') h.prepareItem.mockReturnValueOnce(next.promise);
+    await start();
+    const [context, signal] = h.prepareItem.mock.calls[0]!;
+    f.s.rooms.delete('r1');
+    cancelAbandonedGame(f.io as any, 'r1');
+    next.resolve({ ...context, auctionIndex: 0, item });
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(signal.aborted).toBe(true);
+    expect(h.discardPreparedItem).toHaveBeenCalledOnce();
+    expect(h.activatePreparedItem).not.toHaveBeenCalled();
+    expect(h.logItem).not.toHaveBeenCalled();
+    expect(events('setItem')).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
+});
+
+it('keeps preparation running when another participant remains connected', async () => {
+    await start();
+    f.other.rooms.add('r1');
+    f.s.rooms.delete('r1');
+    cancelAbandonedGame(f.io as any, 'r1');
+    expect(h.prepareItem.mock.calls[0]![1].aborted).toBe(false);
+    await tick();
+    expect(events('setItem')).toHaveLength(2);
+    f.other.rooms.delete('r1');
+});
+
+it('does not start duplicate local game loops or background requests for a room', async () => {
+    await start();
+    await start();
+    expect(h.getPreGameData).toHaveBeenCalledOnce();
+    expect(h.prepareItem).toHaveBeenCalledOnce();
+    expect(events('setItem')).toHaveLength(1);
+});
+
+it('cancels first-item startup when everyone leaves before it finishes', async () => {
+    const first = deferred<string>();
+    h.getPreGameData.mockReturnValueOnce(first.promise);
+    const task = start();
+    f.s.rooms.delete('r1');
+    cancelAbandonedGame(f.io as any, 'r1');
+    first.resolve(JSON.stringify({ rounds: 3, item_data: item }));
+    await task;
+    expect(h.getPreGameData.mock.calls[0]![1]!.aborted).toBe(true);
+    expect(h.startGame).not.toHaveBeenCalled();
+    expect(events('setItem')).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+});
+
+it('finishes an already accepted bid before reading the item for settlement', async () => {
+    const bid = deferred<{ userid: string; roomid: string; bid: number }>();
+    h.handleBid.mockReturnValueOnce(bid.promise);
+    await start();
+    f.s.handlers.get('bid')!({ bid: 50 });
+    await tick();
+    expect(h.distributeItemDB).not.toHaveBeenCalled();
+    bid.resolve({ userid: 'alice', roomid: 'r1', bid: 50 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.logItem).toHaveBeenCalledOnce();
+    expect(events('setItem')).toHaveLength(2);
 });

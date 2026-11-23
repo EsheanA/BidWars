@@ -1,6 +1,12 @@
 import { vi } from 'vitest';
 import type Room from '../RedisRooms/Room';
 import type { RoomRepository } from '../repositories/roomRepository';
+export function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+}
 export const item = {
     name: 'Watch', value: 150, bid: 25, range: '100-200', description: 'Vintage watch', audio_url: 'audioFiles/watch.mp3', img_url: 'watch.svg', bidder_id: 'alice', rarity: 'Pawnshop'
 };

@@ -8,7 +8,7 @@ import handler from '../RedisRooms/RoomHandler';
 const h = vi.mocked(handler);
 vi.mock('socket.io', () => ({ Server: vi.fn() }));
 vi.mock('./auth', () => ({ socketAuth: vi.fn() }));
-vi.mock('./GameLogic', () => ({ handleGameLogic: vi.fn() }));
+vi.mock('./GameLogic', () => ({ handleGameLogic: vi.fn(), cancelAbandonedGame: vi.fn() }));
 vi.mock('../tokenHandling/generateToken', () => ({ generateRoomAccessToken: vi.fn(() => 'room-token') }));
 import { Server } from 'socket.io';
 import { initSocket } from './index';

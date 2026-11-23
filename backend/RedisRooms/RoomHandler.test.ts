@@ -3,14 +3,14 @@ const deps = vi.hoisted(() => ({
     connect: vi.fn(), on: vi.fn(), flush: vi.fn(), room: vi.fn(), auction: vi.fn(), reward: vi.fn()
 }));
 vi.mock('redis', () => ({ createClient: vi.fn(() => ({ connect: deps.connect, on: deps.on, flushDb: deps.flush })) }));
-vi.mock('../itemGeneration/grok', () => ({ default: vi.fn() }));
+vi.mock('../itemGeneration/grok', () => ({ default: vi.fn(), generateDraft: vi.fn(), generateAudio: vi.fn(), discardAudio: vi.fn() }));
 vi.mock('../services/roomService', () => ({ RoomService: vi.fn(function () {
         return Object.assign({ marker: 'room-service' }, Object.fromEntries([
             'getUser', 'userExist', 'findRoom', 'toggleUsersActiveStatus', 'toggleSingleUserActiveStatus', 'setUsersToActive', 'getUserActiveStatus', 'getUsers', 'checkWhetherFull', 'kickUser', 'deleteRoom'
         ].map(k => [k, deps.room])));
     }) }));
 vi.mock('../services/auctionService', () => ({ AuctionService: vi.fn(function () {
-        return Object.fromEntries(['handleBid', 'getPreGameData', 'setItem', 'checkGameStarted', 'startGame'].map(k => [k, deps.auction]));
+        return Object.fromEntries(['handleBid', 'getPreGameData', 'setItem', 'prepareItem', 'activatePreparedItem', 'discardPreparedItem', 'checkGameStarted', 'startGame'].map(k => [k, deps.auction]));
     }) }));
 vi.mock('../services/rewardService', () => ({ RewardService: vi.fn(function () {
         return { distributeItemDB: deps.reward, logItem: deps.reward };

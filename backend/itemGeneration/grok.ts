@@ -2,7 +2,9 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { createWriteStream } from "fs";
-import { finished } from "stream/promises";
+import { pipeline } from "stream/promises";
+import { unlink } from "node:fs/promises";
+import type { ItemDraft } from "../services/itemPreparation";
 import auctionData from "../auctions/auctionz.json";
 import { getAuction } from "../auctions/auctionIndex";
 import { v4 as uuidv4 } from "uuid";
@@ -31,8 +33,8 @@ function chooseRarity(rarities : Array<string>, len : number) : string{
     return(rarities[i] as string);
 }
 
-async function callGrok(auctionIndex : number){
-  try{
+export async function generateDraft(auctionIndex: number, signal?: AbortSignal): Promise<ItemDraft> {
+    signal?.throwIfAborted();
     //finds auction
       const auction = getAuction(auctionIndex);
       const auction_name = auction.name;
@@ -47,6 +49,8 @@ async function callGrok(auctionIndex : number){
       const client = new OpenAI({
           apiKey: process.env.GROK_KEY,
           baseURL: "https://api.x.ai/v1",
+          maxRetries: 0,
+          timeout: 60000,
         });
 
 
@@ -87,45 +91,69 @@ async function callGrok(auctionIndex : number){
           ],
           response_format: zodResponseFormat(itemSchema, "schema"),
           temperature: 1.2
-        });
+        }, { signal });
 
       const choice = response.choices[0];
       if (!choice) {
         throw new Error("No completion choice returned");
       }
       const schema  = choice.message.parsed;
-      console.log(schema);
-      
+      if (!schema) throw new Error("No parsed item returned");
+      signal?.throwIfAborted();
+      return { item: schema, category, rarity, img_url: `${category}.svg` };
+}
 
+// pipeline handles source errors as well as destination errors; never publish a partial file.
+export async function generateAudio(draft: ItemDraft, signal?: AbortSignal): Promise<string> {
+      signal?.throwIfAborted();
+      const requestSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000);
       const responseTTS = await fetch("https://api.lemonfox.ai/v1/audio/speech", {
         method: "POST",
+        signal: requestSignal,
         headers: {
             "Authorization": `Bearer ${process.env.LEMON_FOX_KEY}`,
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
             model: "lemon-fox-v1",
-            input: schema?.item_description,
+            input: draft.item.item_description,
             voice: "adam",
             response_format: "mp3"
         })
       })
-      // console.log("STATUS:", responseTTS.status);
-      // console.log("CONTENT-TYPE:", responseTTS.headers.get("content-type"));
-      const filename = schema?.item_name.replaceAll(" ", "_");
-      const unique = uuidv4();
-      const fileStream = createWriteStream(`audioFiles/${filename}_${unique}.mp3`, { flags: "wx" });
-      const body = responseTTS.body as NodeReadableStream<Uint8Array>;
-      await finished(Readable.fromWeb(body).pipe(fileStream));
-      return(Promise.resolve(JSON.stringify({item: schema, category, rarity, audio_url: `audioFiles/${filename}_${unique}.mp3`, img_url: `${category}.svg`})))
-    }catch(error){
-      console.error("Grok call failed: ", error)
-      return(Promise.reject(error))
-    }
-    
+      if (!responseTTS.ok || !responseTTS.body) {
+        await responseTTS.body?.cancel();
+        throw new Error("Speech generation failed");
+      }
+      requestSignal.throwIfAborted();
+      const filename = draft.item.item_name.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const path = `audioFiles/${filename}_${uuidv4()}.mp3`;
+      const audio = Readable.fromWeb(responseTTS.body as NodeReadableStream<Uint8Array>);
+      const fileStream = createWriteStream(path, { flags: "wx" });
+      try {
+        await pipeline(audio, fileStream, { signal: requestSignal });
+        requestSignal.throwIfAborted();
+        return path;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') await discardAudio(path);
+        throw error;
+      }
 }
 
+export async function discardAudio(path: string): Promise<void> {
+    // Only files allocated by this module can be discarded.
+    if (!/^audioFiles\/[a-zA-Z0-9_-]+\.mp3$/.test(path)) throw new Error("Invalid prepared audio path");
+    try {
+        await unlink(path);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+}
+
+async function callGrok(auctionIndex: number, signal?: AbortSignal): Promise<string> {
+    const draft = await generateDraft(auctionIndex, signal);
+    const audio_url = await generateAudio(draft, signal);
+    return JSON.stringify({ ...draft, audio_url });
+}
 
 export default callGrok;
-
-
