@@ -1,6 +1,6 @@
 import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auctionIndexes';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { repository, room, item, generated } from '../test-support/fixtures';
+import { repository, room, item, generated, deferred } from '../test-support/fixtures';
 import { AuctionService } from './auctionService';
 let harness: ReturnType<typeof repository>, service: AuctionService, generate: ReturnType<typeof vi.fn<(auctionIndex: number) => Promise<string>>>;
 beforeEach(() => {
@@ -123,4 +123,93 @@ it.each(['different stored room', 'missing room membership'])('rejects a bid wit
     await expect(service.handleBid('alice', 50, 'r1')).rejects.toContain(reason === 'different stored room' ? 'Not authorized' : 'Not a participant');
     expect(harness.api.saveRoom).not.toHaveBeenCalled();
     expect(harness.rooms.get('r1')).toEqual(before);
+});
+
+const target = { roomId: 'r1', gameId: 'g1', round: 2, transitionId: 't1' };
+function backgroundService() {
+    const source = {
+        generateDraft: vi.fn(async () => generated),
+        generateAudio: vi.fn(async () => generated.audio_url),
+        discardAudio: vi.fn(async () => {})
+    };
+    harness.rooms.get('r1')!.in_progress = true;
+    service = new AuctionService(harness.dependency, generate, source);
+    return source;
+}
+it('prepares without writing room or user data, then activates against fresh post-settlement state', async () => {
+    const source = backgroundService();
+    const draft = deferred<typeof generated>();
+    source.generateDraft.mockReturnValueOnce(draft.promise);
+    const before = structuredClone(harness.rooms.get('r1'));
+    const preparing = service.prepareItem(target, new AbortController().signal);
+    await vi.waitFor(() => expect(source.generateDraft).toHaveBeenCalledOnce());
+    expect(harness.rooms.get('r1')).toEqual(before);
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+    await service.handleBid('alice', 75, 'r1');
+    harness.api.saveRoom.mockClear();
+    draft.resolve(generated);
+    const prepared = await preparing;
+    expect(harness.rooms.get('r1')!.itemData).toMatchObject({ bid: 75, bidder_id: 'alice' });
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+    expect(harness.api.saveUser).not.toHaveBeenCalled();
+
+    // These changes happen after preparation and must survive activation.
+    harness.rooms.get('r1')!.users.push({ userid: 'bob', username: 'Bob', active: true });
+    harness.rooms.get('r1')!.items.push({ ...item, name: 'Awarded' });
+    harness.users.get('alice')!.balance = 200;
+    await service.activatePreparedItem(target, prepared, new AbortController().signal);
+    expect(harness.rooms.get('r1')!.itemData).toEqual({ ...item, bidder_id: '' });
+    expect(harness.rooms.get('r1')!.users).toHaveLength(2);
+    expect(harness.rooms.get('r1')!.items[0]!.name).toBe('Awarded');
+    expect(harness.users.get('alice')!.balance).toBe(200);
+});
+it.each(['gameId', 'roomId', 'round', 'transitionId'] as const)('rejects a stale prepared %s before saving', async field => {
+    backgroundService();
+    const signal = new AbortController().signal;
+    const prepared = await service.prepareItem(target, signal);
+    const stale = { ...prepared, [field]: field === 'round' ? 3 : 'other' };
+    await expect(service.activatePreparedItem(target, stale, signal)).rejects.toThrow('does not belong');
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+});
+it.each(['deleted', 'empty', 'stopped', 'auction changed', 'cancelled'])('does not activate a prepared item when the game is %s', async reason => {
+    backgroundService();
+    const controller = new AbortController();
+    const prepared = await service.prepareItem(target, controller.signal);
+    if (reason === 'deleted') harness.rooms.clear();
+    if (reason === 'empty') harness.rooms.get('r1')!.users = [];
+    if (reason === 'stopped') harness.rooms.get('r1')!.in_progress = false;
+    if (reason === 'auction changed') harness.rooms.get('r1')!.auctionIndex = 1;
+    if (reason === 'cancelled') controller.abort();
+    await expect(service.activatePreparedItem(target, prepared, controller.signal)).rejects.toThrow();
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+});
+it('rejects an invalid auction before any background provider call', async () => {
+    const source = backgroundService();
+    harness.rooms.get('r1')!.auctionIndex = -1;
+    await expect(service.prepareItem(target, new AbortController().signal)).rejects.toThrow('Invalid auction index');
+    expect(source.generateDraft).not.toHaveBeenCalled();
+    expect(source.generateAudio).not.toHaveBeenCalled();
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+});
+
+it('stops preparation before the next provider stage if the room is deleted', async () => {
+    const source = backgroundService();
+    source.generateDraft.mockImplementationOnce(async () => { harness.rooms.clear(); return generated; });
+    await expect(service.prepareItem(target, new AbortController().signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(source.generateAudio).not.toHaveBeenCalled();
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+});
+
+it('retries a temporary preparation-room read failure without calling a provider or mutating storage first', async () => {
+    vi.useFakeTimers();
+    const source = backgroundService();
+    harness.api.findRoom.mockRejectedValueOnce(new Error('Redis unavailable'));
+    const task = service.prepareItem(target, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(source.generateDraft).not.toHaveBeenCalled();
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect((await task).item.name).toBe('Watch');
+    expect(source.generateDraft).toHaveBeenCalledOnce();
+    expect(source.generateAudio).toHaveBeenCalledOnce();
 });

@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 import dotenv from "dotenv";
-import callGrok from "../itemGeneration/grok";
+import callGrok, { generateDraft, generateAudio, discardAudio } from "../itemGeneration/grok";
 import { RoomRepository } from "../repositories/roomRepository";
 import { RoomService } from "../services/roomService";
 import { AuctionService } from "../services/auctionService";
@@ -23,7 +23,7 @@ client.on("error", (error: Error) => {
 
 const repository = new RoomRepository(client);
 const rooms = new RoomService(repository);
-const auctions = new AuctionService(repository, callGrok);
+const auctions = new AuctionService(repository, callGrok, { generateDraft, generateAudio, discardAudio });
 const rewards = new RewardService(repository);
 
 // Keep the existing socket API while each service owns its own behavior.
@@ -50,6 +50,9 @@ const redisRoomHandler = {
     handleBid: auctions.handleBid.bind(auctions),
     getPreGameData: auctions.getPreGameData.bind(auctions),
     setItem: auctions.setItem.bind(auctions),
+    prepareItem: auctions.prepareItem.bind(auctions),
+    activatePreparedItem: auctions.activatePreparedItem.bind(auctions),
+    discardPreparedItem: auctions.discardPreparedItem.bind(auctions),
     checkGameStarted: auctions.checkGameStarted.bind(auctions),
     startGame: auctions.startGame.bind(auctions),
     distributeItemDB: rewards.distributeItemDB.bind(rewards),

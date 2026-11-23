@@ -1,14 +1,29 @@
-import type Room from "../RedisRooms/Room";
 import { getAuction } from "../auctions/auctionIndex";
 import { RoomRepository } from "../repositories/roomRepository";
 import type { GrokItemResponse, Item } from "../types/Auction";
+import { prepareMedia, type PreparationSource } from './itemPreparation';
+import type { TimingContext } from '../logging/roundTiming';
 
-type ItemGenerator = (auctionIndex: number) => Promise<string>;
+type ItemGenerator = (auctionIndex: number, signal?: AbortSignal) => Promise<string>;
+
+export interface PreparedItem extends TimingContext {
+    auctionIndex: number;
+    item: Item;
+}
+
+function toItem({ item, rarity, audio_url, img_url }: GrokItemResponse): Item {
+    return {
+        name: item.item_name, value: item.item_value, bid: item.starting_bid,
+        range: item.item_guessing_range, description: item.item_description,
+        audio_url, img_url, bidder_id: '', rarity
+    };
+}
 
 export class AuctionService {
     constructor(
         private readonly rooms: RoomRepository,
-        private readonly generateItem: ItemGenerator
+        private readonly generateItem: ItemGenerator,
+        private readonly source?: PreparationSource
     ) {}
 
     async handleBid(
@@ -43,11 +58,11 @@ export class AuctionService {
         }
     }
 
-    async getPreGameData(roomId: string): Promise<string> {
+    async getPreGameData(roomId: string, signal?: AbortSignal, context?: TimingContext): Promise<string> {
         try {
+            await this.setItem(roomId, signal, context);
             const room = await this.rooms.getRoom(roomId);
             const auction = getAuction(room.auctionIndex);
-            await this.generateRoomItem(roomId, room);
             return JSON.stringify({
                 rounds: room.rounds,
                 item_data: room.itemData,
@@ -55,16 +70,33 @@ export class AuctionService {
                 bid_options: room.bid_options
             });
         } catch (error) {
-            console.error("Error getting pregame data: ", error);
+            console.error('Error getting pregame data:', error instanceof Error ? error.name : 'UnknownError');
             throw error;
         }
     }
 
-    async setItem(roomId: string): Promise<Item> {
+    async setItem(roomId: string, signal?: AbortSignal, context?: TimingContext): Promise<Item> {
+        let generated: GrokItemResponse | undefined;
+        let installed = false;
         try {
+            signal?.throwIfAborted();
             const room = await this.rooms.getRoom(roomId);
-            return await this.generateRoomItem(roomId, room);
+            getAuction(room.auctionIndex);
+            generated = this.source && signal && context
+                ? await prepareMedia(this.source, context, signal, () => this.requireRoom(roomId, false, room.auctionIndex))
+                : JSON.parse(await (signal ? this.generateItem(room.auctionIndex, signal) : this.generateItem(room.auctionIndex))) as GrokItemResponse;
+            signal?.throwIfAborted();
+            const item = toItem(generated);
+            const fresh = await this.rooms.getRoom(roomId);
+            getAuction(fresh.auctionIndex);
+            if (fresh.auctionIndex !== room.auctionIndex) throw new Error('Auction changed during preparation');
+            signal?.throwIfAborted();
+            fresh.itemData = item;
+            await this.rooms.saveRoom(roomId, fresh);
+            installed = true;
+            return item;
         } catch (error) {
+            if (generated && !installed) await this.source?.discardAudio(generated.audio_url);
             console.error("Error setting next item: ", roomId);
             throw error;
         }
@@ -92,22 +124,47 @@ export class AuctionService {
         }
     }
 
-    private async generateRoomItem(roomId: string, room: Room): Promise<Item> {
+    async prepareItem(context: TimingContext, signal: AbortSignal): Promise<PreparedItem> {
+        if (!this.source) throw new Error('Preparation source not configured');
+        let auctionIndex: number | undefined;
+        const data = await prepareMedia(this.source, context, signal, async () => {
+            const index = await this.requireRoom(context.roomId, true, auctionIndex);
+            auctionIndex = index;
+            return index;
+        });
+        return { ...context, auctionIndex: auctionIndex!, item: toItem(data) };
+    }
+
+    async activatePreparedItem(context: TimingContext, prepared: PreparedItem, signal: AbortSignal): Promise<Item> {
+        signal.throwIfAborted();
+        if (context.gameId !== prepared.gameId || context.roomId !== prepared.roomId ||
+            context.round !== prepared.round || context.transitionId !== prepared.transitionId) {
+            throw new Error('Prepared item does not belong to this game and round');
+        }
+        const room = await this.rooms.getRoom(context.roomId);
         getAuction(room.auctionIndex);
-        const data = await this.generateItem(room.auctionIndex);
-        const { item, rarity, audio_url, img_url } = JSON.parse(data) as GrokItemResponse;
-        room.itemData = {
-            name: item.item_name,
-            value: item.item_value,
-            bid: item.starting_bid,
-            range: item.item_guessing_range,
-            description: item.item_description,
-            audio_url,
-            img_url,
-            bidder_id: "",
-            rarity
-        };
-        await this.rooms.saveRoom(roomId, room);
-        return room.itemData;
+        if (!room.in_progress || room.users.length === 0 || room.auctionIndex !== prepared.auctionIndex) {
+            throw new Error('Prepared item is no longer valid for this room');
+        }
+        signal.throwIfAborted();
+        room.itemData = prepared.item;
+        await this.rooms.saveRoom(context.roomId, room);
+        return prepared.item;
+    }
+
+    async discardPreparedItem(prepared: Pick<PreparedItem, 'item'>): Promise<void> {
+        await this.source?.discardAudio(prepared.item.audio_url);
+    }
+
+    private async requireRoom(roomId: string, started: boolean, expectedIndex?: number): Promise<number> {
+        const room = await this.rooms.findRoom(roomId);
+        if (!room || (started && !room.in_progress) || room.users.length === 0) {
+            throw new DOMException('Game no longer active', 'AbortError');
+        }
+        getAuction(room.auctionIndex);
+        if (expectedIndex !== undefined && expectedIndex !== room.auctionIndex) {
+            throw new DOMException('Auction changed during preparation', 'AbortError');
+        }
+        return room.auctionIndex;
     }
 }

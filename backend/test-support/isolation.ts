@@ -15,6 +15,10 @@ function isolateServices() {
     vi.stubGlobal('fetch', vi.fn(forbidden));
     for (const key of ['MONGODB_URI', 'REDIS_URL', 'GROK_KEY', 'LEMON_FOX_KEY', 'ACCESS_TOKEN_SECRET'])
         vi.stubEnv(key, 'unit-test-only');
+    vi.stubEnv('ROUND_TIMING_LOGS', 'true');
+    vi.stubEnv('ROUND_TIMING_DETAILS', 'false');
+    vi.stubEnv('ITEM_PREPARATION_RETRY_MS', '1000');
+    vi.stubEnv('ITEM_PREPARATION_RETRY_CAP_MS', '10000');
     vi.spyOn(console, 'log').mockImplementation(() => {
     });
     vi.spyOn(console, 'error').mockImplementation(() => {
