@@ -74,7 +74,7 @@ export function socket(id = 's1', roomId = 'r1') {
     const handlers = new Map<string, Function>();
     const listeners = new Map<string, Function[]>();
     return {
-        id, rooms: new Set([roomId]), handlers,
+        id, rooms: new Set([roomId]), handlers, data: {userid: 'alice', roomid: roomId},
         user: { userid: 'alice', username: 'Alice' }, auctionIndex: 1,
         session: undefined as any, emit: vi.fn(), join: vi.fn(),
         on: vi.fn((event: string, fn: Function) => {

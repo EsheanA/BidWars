@@ -127,9 +127,9 @@ function BattleRoom(){
           }
         }, [timer])
 
-    const makeBid = (value : number, player_id : number) : void =>{
+    const makeBid = (value : number) : void =>{
         if(itemForBid && socket.current !== null){
-            socket.current.emit("bid", {userid: player_id, bid: highestBid+value})
+            socket.current.emit("bid", {bid: highestBid+value})
         }
     }
 
@@ -138,7 +138,7 @@ function BattleRoom(){
             <Avatar 
                 user = {u} 
                 highestBidder = {highestBidder} 
-                makeBid = {(val : number, userid : number) => makeBid(val, userid)} 
+                makeBid = {makeBid}
                 name = {u.username} 
                 self = {u.userid === user?.userid ? true: false} 
                 bidOptions = {bidOptions}

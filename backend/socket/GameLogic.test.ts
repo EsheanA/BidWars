@@ -158,3 +158,21 @@ it('starts the game and announces its initial bidding state before opening the r
     expect(events('begin_game')).toEqual([{ room: 'r1', event: 'begin_game', data: { balance: 250, bidOptions: [5, 10, 20] } }]);
     expect(h.startGame.mock.invocationCallOrder[0]).toBeLessThan(h.toggleUsersActiveStatus.mock.invocationCallOrder[0]!);
 });
+
+it('ignores a forged bidder ID and attributes the bid to the authenticated socket', async () => {
+    await start();
+    await f.s.handlers.get('bid')!({userid: 'victim', bid: 50});
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.handleBid).toHaveBeenCalledExactlyOnceWith('alice', 50, 'r1');
+    expect(events('current bid')).toEqual([expect.objectContaining({room: 'r1', data: expect.objectContaining({bidder_id: 'alice'})})]);
+});
+it.each(['no identity', 'wrong bound room', 'left room'])('rejects a bid with %s before calling the auction service', async reason => {
+    await start();
+    if (reason === 'no identity') f.s.data.userid = '';
+    if (reason === 'wrong bound room') f.s.data.roomid = 'other';
+    if (reason === 'left room') f.s.rooms.delete('r1');
+    await f.s.handlers.get('bid')!({userid: 'alice', bid: 50});
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.handleBid).not.toHaveBeenCalled();
+    expect(events('current bid')).toEqual([]);
+});

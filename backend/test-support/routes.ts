@@ -7,7 +7,7 @@ export async function invoke(router: Router, path: string, method: string, body:
         throw new Error(`Missing route ${method} ${path}`);
     const req: any = { body, cookies };
     const res: any = {
-        statusCode: 200, body: undefined, status: vi.fn(function (this: any, n: number) {
+        statusCode: 200, body: undefined, send: vi.fn(function(this: any, value: unknown) {this.body = value; return this;}), status: vi.fn(function (this: any, n: number) {
             this.statusCode = n;
             return this;
         }), json: vi.fn(function (this: any, v: unknown) {

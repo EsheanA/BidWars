@@ -11,24 +11,24 @@ beforeEach(() => {
 describe("AuctionService", () => {
     describe("bidding", () => {
         it("should accept an active player's affordable bid and record the winning player and amount", async () => {
-            expect(await service.handleBid('alice', 75)).toEqual({ userid: 'alice', bid: 75, roomid: 'r1' });
+            expect(await service.handleBid('alice', 75, 'r1')).toEqual({ userid: 'alice', bid: 75, roomid: 'r1' });
             expect(harness.rooms.get('r1')!.itemData).toMatchObject({ bid: 75, bidder_id: 'alice' });
         });
         it("should accept a bid equal to the player's remaining balance", async () => {
-            expect((await service.handleBid('alice', 250)).userid).toBe('alice');
+            expect((await service.handleBid('alice', 250, 'r1')).userid).toBe('alice');
         });
         it("should reject a bid above the player's balance without changing the current item", async () => {
-            expect((await service.handleBid('alice', 251)).userid).toBe('');
+            expect((await service.handleBid('alice', 251, 'r1')).userid).toBe('');
             expect(harness.rooms.get('r1')!.itemData).toEqual(item);
             expect(harness.api.saveRoom).not.toHaveBeenCalled();
         });
         it("should reject an inactive player's bid without changing the current item", async () => {
             harness.users.get('alice')!.active = false;
-            expect((await service.handleBid('alice', 50)).userid).toBe('');
+            expect((await service.handleBid('alice', 50, 'r1')).userid).toBe('');
             expect(harness.api.saveRoom).not.toHaveBeenCalled();
         });
         it("should leave the player's balance unchanged until the round is settled", async () => {
-            await service.handleBid('alice', 50);
+            await service.handleBid('alice', 50, 'r1');
             expect(harness.users.get('alice')!.balance).toBe(250);
             expect(harness.api.saveUser).not.toHaveBeenCalled();
         });
@@ -42,13 +42,13 @@ describe("AuctionService", () => {
                     harness.rooms.clear();
                 if (variant === 'item')
                     harness.rooms.get('r1')!.itemData = null;
-                await expect(service.handleBid('alice', 50)).rejects.toBeTruthy();
+                await expect(service.handleBid('alice', 50, 'r1')).rejects.toBeTruthy();
             }
         });
         it("should report a failed bid read or write without returning an accepted bid", async () => {
             for (const fn of [harness.api.getUser, harness.api.getRoom, harness.api.saveRoom]) {
                 fn.mockRejectedValueOnce(new Error('offline'));
-                await expect(service.handleBid('alice', 50)).rejects.toContain('offline');
+                await expect(service.handleBid('alice', 50, 'r1')).rejects.toContain('offline');
             }
         });
     });
@@ -114,4 +114,13 @@ it.each(boundaryIndexes)('prepares items for boundary auction %s', async (index)
     expect(generate).toHaveBeenNthCalledWith(1, index);
     expect(generate).toHaveBeenNthCalledWith(2, index);
     expect(harness.rooms.get('r1')!.auctionIndex).toBe(index);
+});
+
+it.each(['different stored room', 'missing room membership'])('rejects a bid with %s without changing state', async reason => {
+    if (reason === 'different stored room') harness.users.get('alice')!.roomid = 'other';
+    else harness.rooms.get('r1')!.users = [];
+    const before = structuredClone(harness.rooms.get('r1'));
+    await expect(service.handleBid('alice', 50, 'r1')).rejects.toContain(reason === 'different stored room' ? 'Not authorized' : 'Not a participant');
+    expect(harness.api.saveRoom).not.toHaveBeenCalled();
+    expect(harness.rooms.get('r1')).toEqual(before);
 });

@@ -151,3 +151,17 @@ it('rejects invalid internal selections before matchmaking or joining', async ()
     expect(h.getUsers).not.toHaveBeenCalled();
     expect(handleGameLogic).not.toHaveBeenCalled();
 });
+
+it('binds a successfully joined socket to its server-verified identity and room', async () => {
+    f.s.data = {userid: '', roomid: ''};
+    await join();
+    expect(f.s.data).toEqual({userid: 'alice', roomid: 'r1'});
+});
+it('rejects joining when the stored player no longer belongs to the selected room', async () => {
+    f.s.data = {userid: '', roomid: ''};
+    h.getUser.mockResolvedValue({...user(), roomid: 'other'});
+    await join();
+    expect(f.s.join).not.toHaveBeenCalled();
+    expect(f.s.data.userid).toBe('');
+    expect(f.io.events).toEqual([]);
+});

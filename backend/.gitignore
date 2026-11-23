@@ -5,3 +5,4 @@ ollama
 ./.DS_Store
 coverage/
 TEST_OUTLINES.md
+/TESTING.md

@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction} from "express";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { verifyAccessToken } from "../tokenHandling/verifyToken";
 import crypto from "crypto";
 
 import UserModel from "../models/User";
@@ -157,13 +157,7 @@ router.post("/me", async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const secret = process.env.ACCESS_TOKEN_SECRET;
-
-        if (!secret) {
-            throw new Error("ACCESS_TOKEN_SECRET is undefined");
-        }
-
-        jwt.verify(token, secret);
+        verifyAccessToken(token, userid);
 
         const user = await UserModel.findById(userid);
 
@@ -202,18 +196,7 @@ router.post("/items", async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const secret = process.env.ACCESS_TOKEN_SECRET;
-
-        if (!secret) {
-            throw new Error("ACCESS_TOKEN_SECRET is undefined");
-        }
-
-        const decoded = jwt.verify(token, secret) as {
-            userid: string;
-            username: string;
-        };
-
-        const { username } = decoded;
+        verifyAccessToken(token, userid);
 
         const itemList = await Item.find({
             owner: userid
@@ -248,16 +231,7 @@ router.post("/item/sell", async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const secret = process.env.ACCESS_TOKEN_SECRET;
-
-        if (!secret) {
-            throw new Error("ACCESS_TOKEN_SECRET is undefined");
-        }
-
-        jwt.verify(token, secret) as {
-            userid: string;
-            username: string;
-        };
+        verifyAccessToken(token, userid);
 
         const hash: string = crypto
             .createHash("sha256")

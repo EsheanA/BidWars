@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import cors, { CorsOptions } from "cors";
-import jwt from "jsonwebtoken";
+import { verifyAccessToken } from "./tokenHandling/verifyToken";
 import cookieParser from "cookie-parser";
 import path from "path";
 
@@ -100,8 +100,6 @@ app.post(
             const token: string | undefined =
                 req.cookies[`token_${userid}`];
 
-            console.log(token);
-
             if (!token) {
                 res.status(401).json({
                     error: "No token provided"
@@ -110,17 +108,7 @@ app.post(
                 return;
             }
 
-            const secret = process.env.ACCESS_TOKEN_SECRET;
-
-            if (!secret) {
-                throw new Error(
-                    "ACCESS_TOKEN_SECRET is undefined"
-                );
-            }
-
-            const decoded = jwt.verify(token, secret);
-
-            console.log(decoded);
+            verifyAccessToken(token, userid);
 
             res.status(200).send("Server is up");
 

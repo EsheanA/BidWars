@@ -13,11 +13,16 @@ export class AuctionService {
 
     async handleBid(
         userId: string,
-        bid: number
+        bid: number,
+        expectedRoomId: string
     ): Promise<{ userid: string; bid: number; roomid: string }> {
         try {
             const user = await this.rooms.getUser(userId);
-            const room = await this.rooms.getRoom(user.roomid);
+            if (user.roomid !== expectedRoomId) throw new Error("Not authorized for this room");
+            const room = await this.rooms.getRoom(expectedRoomId);
+            if (!room.users.some(participant => participant.userid === userId)) {
+                throw new Error("Not a participant in this room");
+            }
             if (room.itemData === null) {
                 throw new Error("Current item data could not be found");
             }

@@ -35,3 +35,17 @@ describe("application import and shared CORS policy", () => {
             await expect(origin(value)).rejects.toThrow('CORS');
     });
 });
+
+import {invoke} from './test-support/routes';
+import {generateAccessToken, generateRoomAccessToken} from './tokenHandling/generateToken';
+it('accepts only an account token matching the root authentication request', async () => {
+    const user = {_id: 'alice', username: 'Alice'};
+    const response = await invoke(app.router, '/', 'post', {userid: 'alice'}, {token_alice: generateAccessToken(user)});
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe('Server is up');
+    for (const token of [generateRoomAccessToken(user, 'r1'), generateAccessToken({_id: 'bob', username: 'Bob'})]) {
+        const denied = await invoke(app.router, '/', 'post', {userid: 'alice'}, {token_alice: token});
+        expect(denied.statusCode).toBe(401);
+        expect(denied.send).not.toHaveBeenCalled();
+    }
+});

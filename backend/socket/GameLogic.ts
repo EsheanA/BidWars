@@ -1,9 +1,9 @@
 import { Server, Socket} from "socket.io";
 import { type Item } from "../types/Auction";
+import type { AuthSocket } from "./types";
 import redisRoomHandler from "../RedisRooms/RoomHandler";
 
 interface BidPayload {
-    userid: string;
     bid: number;
 }
 
@@ -19,7 +19,7 @@ async function itemBid(
     item: Item,
     io: Server,
     sockets: Socket[],
-    handler: (data: BidPayload) => void,
+    handlerFor: (socket: Socket) => (data: unknown) => void,
     round: () => Promise<void>,
     secs: number
 ): Promise<void> {
@@ -43,8 +43,11 @@ async function itemBid(
         }, secs * 1000);
 
         for (let i = 0; i < sockets.length; i++) {
-            sockets[i]?.off("bid", handler);
-            sockets[i]?.on("bid", handler);
+            const socket = sockets[i];
+            if (!socket) continue;
+            const handler = handlerFor(socket);
+            socket.off("bid", handler);
+            socket.on("bid", handler);
         }
 
     } catch (error) {
@@ -53,14 +56,19 @@ async function itemBid(
 }
 
 const handleBid = async (
-    userid: string,
-    bid: number,
+    socket: AuthSocket,
+    roomid: string,
+    payload: unknown,
     io: Server
 ): Promise<void> => {
     try {
-        const data = await redisRoomHandler.handleBid(userid, bid) as {userid: string, bid: number, roomid: string};
+        const userid = socket.data.userid;
+        if (!userid || socket.data.roomid !== roomid || !socket.rooms.has(roomid) ||
+            !payload || typeof payload !== "object" || !("bid" in payload)) return;
+        const { bid } = payload as BidPayload;
+        const data = await redisRoomHandler.handleBid(userid, bid, roomid) as {userid: string, bid: number, roomid: string};
 
-        if (data.userid !== "") {
+        if (data.userid === userid && data.roomid === roomid) {
             io.to(data.roomid).emit("current bid", {
                 bidder_id: data.userid,
                 bid,
@@ -92,8 +100,14 @@ async function handleGameLogic(
 
         const secs: number = 20;
 
-        const handler = ({ userid, bid }: BidPayload): void => {
-            void handleBid(userid, bid, io);
+        const handlers = new Map<Socket, (data: unknown) => void>();
+        const handlerFor = (socket: Socket) => {
+            let handler = handlers.get(socket);
+            if (!handler) {
+                handler = (payload: unknown) => { void handleBid(socket as AuthSocket, roomid, payload, io); };
+                handlers.set(socket, handler);
+            }
+            return handler;
         };
 
         io.to(roomid).emit("begin_game", {
@@ -146,7 +160,7 @@ async function handleGameLogic(
                         new_item,
                         io,
                         sockets,
-                        handler,
+                        handlerFor,
                         round,
                         secs
                     );

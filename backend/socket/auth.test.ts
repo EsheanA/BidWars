@@ -15,11 +15,13 @@ beforeEach(() => {
     vi.clearAllMocks();
     h.checkGameStarted.mockResolvedValue(true);
     h.userExist.mockResolvedValue(true);
+    h.getUser.mockResolvedValue(user());
+    h.getUsers.mockResolvedValue(room().users);
     s = { handshake: { auth: { userid: 'alice' }, query: { auctionIndex: '0' }, headers: { cookie: '' } } };
     next = vi.fn();
 });
 function token(payload: any = { userid: 'alice', username: 'Alice' }, options: jwt.SignOptions = {}) {
-    return jwt.sign(payload, 'unit-test-only', { expiresIn: '20m', ...options });
+    return jwt.sign({username: 'Alice', purpose: payload.roomid ? 'room' : 'access', ...payload}, 'unit-test-only', { expiresIn: '20m', ...options });
 }
 describe("socketAuth", () => {
     describe("access-cookie authentication", () => {
@@ -132,4 +134,19 @@ describe('auction selection during reconnect', () => {
         expect(h.checkGameStarted).not.toHaveBeenCalled();
         expect(h.userExist).not.toHaveBeenCalled();
     });
+});
+
+it('rejects an account token belonging to another handshake player', async () => {
+    s.handshake.headers.cookie = 'token_alice=' + token({userid: 'bob', username: 'Bob'});
+    await socketAuth(s, next);
+    expect(next).toHaveBeenCalledExactlyOnceWith(expect.any(Error));
+    expect(s.user).toBeUndefined();
+});
+it.each(['different stored room', 'missing room membership'])('rejects a room session with %s', async reason => {
+    s.handshake.auth.roomToken = token({userid: 'alice', roomid: 'r1'});
+    if (reason === 'different stored room') h.getUser.mockResolvedValue({...user(), roomid: 'other'});
+    else h.getUsers.mockResolvedValue([]);
+    await socketAuth(s, next);
+    expect(next).toHaveBeenCalledExactlyOnceWith(expect.any(Error));
+    expect(s.session).toBeUndefined();
 });

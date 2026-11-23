@@ -23,7 +23,7 @@ describe("token generation", () => {
         it("should omit passwords and other unrelated user fields from the token", async () => {
             const token = generateAccessToken({ ...user, passwordHash: 'secret' } as typeof user);
             expect(claims(token)).not.toHaveProperty('passwordHash');
-            expect(Object.keys(claims(token)).sort()).toEqual(['exp', 'iat', 'userid', 'username']);
+            expect(Object.keys(claims(token)).sort()).toEqual(['exp', 'iat', 'purpose', 'userid', 'username']);
         });
         it("should reject token generation when ACCESS_TOKEN_SECRET is missing or signing fails", async () => {
             vi.stubEnv('ACCESS_TOKEN_SECRET', '');

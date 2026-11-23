@@ -68,7 +68,7 @@ describe('account and inventory access', () => {
     });
     it.each(['invalid', 'expired'])('rejects an %s account token before reading the profile', async (kind) => {
         const lookup = vi.spyOn(User, 'findById');
-        const value = kind === 'invalid' ? 'invalid-token' : jwt.sign({ userid: accountId }, 'unit-test-only', { expiresIn: -1 });
+        const value = kind === 'invalid' ? 'invalid-token' : jwt.sign({ purpose: 'access', userid: accountId }, 'unit-test-only', { expiresIn: -1 });
         const response = await invoke(router, '/me', 'post', { userid: accountId }, { [`token_${accountId}`]: value });
         expect(response.statusCode).toBe(401);
         expect(lookup).not.toHaveBeenCalled();
@@ -83,7 +83,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import Item from '../models/Item';
 function authCookie() {
-    return { [`token_${accountId}`]: jwt.sign({ userid: accountId, username: 'Alice' }, 'unit-test-only', { expiresIn: '20m' }) };
+    return { [`token_${accountId}`]: jwt.sign({ purpose: 'access', userid: accountId, username: 'Alice' }, 'unit-test-only', { expiresIn: '20m' }) };
 }
 describe('selling owned inventory', () => {
     it.each([
@@ -117,4 +117,18 @@ describe('selling owned inventory', () => {
             expect(update).not.toHaveBeenCalled();
         }
     });
+});
+
+it.each(['/me', '/items', '/item/sell'])('rejects room tokens and other-player tokens at %s before storage access', async path => {
+    const profile = vi.spyOn(User, 'findById');
+    const inventory = vi.spyOn(Item, 'find');
+    const sale = vi.spyOn(Item, 'findOne');
+    const {generateAccessToken, generateRoomAccessToken} = await import('../tokenHandling/generateToken.js');
+    for (const value of [generateRoomAccessToken({_id: accountId, username: 'Alice'}, 'r1'), generateAccessToken({_id: 'bob', username: 'Bob'})]) {
+        const response = await invoke(router, path, 'post', {userid: accountId, itemName: 'Watch', quantitySold: 1}, {[`token_${accountId}`]: value});
+        expect(response.statusCode).toBe(401);
+    }
+    expect(profile).not.toHaveBeenCalled();
+    expect(inventory).not.toHaveBeenCalled();
+    expect(sale).not.toHaveBeenCalled();
 });
