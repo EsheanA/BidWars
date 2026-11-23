@@ -10,11 +10,13 @@ export const generateAccessToken = (user: AccessTokenUser): string => {
 
     return jwt.sign(
         {
-            userid: user._id,
-            username: user.username
+            userid: user._id.toString(),
+            username: user.username,
+            purpose: "access"
         },
         secret,
         {
+            algorithm: "HS256",
             expiresIn: "20m"
         }
     );
@@ -32,12 +34,14 @@ export const generateRoomAccessToken = (
 
     return jwt.sign(
         {
-            userid: user._id,
+            userid: user._id.toString(),
             username: user.username,
-            roomid
+            roomid,
+            purpose: "room"
         },
         secret,
         {
+            algorithm: "HS256",
             expiresIn: "5m"
         }
     );

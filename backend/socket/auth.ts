@@ -1,20 +1,10 @@
 import * as cookie from "cookie";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import { Socket } from "socket.io";
+import { verifyAccessToken, verifyRoomAccessToken } from "../tokenHandling/verifyToken";
+import type { AuthSocket } from "./types";
+
+import { parseAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
 
 import redisRoomHandler from "../RedisRooms/RoomHandler";
-
-interface SessionPayload extends JwtPayload {
-    userid: string;
-    username: string;
-    roomid: string;
-}
-
-interface AuthSocket extends Socket {
-    session?: SessionPayload;
-    user?: string | JwtPayload;
-    auctionIndex?: string;
-}
 
 export const socketAuth = async (
     socket: AuthSocket,
@@ -27,21 +17,13 @@ export const socketAuth = async (
         };
 
         const { auctionIndex } = socket.handshake.query;
+        // Reconnects identify their existing room through the signed session.
+        const normalizedIndex = roomToken && auctionIndex === undefined
+            ? undefined : parseAuctionIndex(auctionIndex);
 
-        const secret = process.env.ACCESS_TOKEN_SECRET;
-
-        if (!secret) {
-            throw new Error("ACCESS_TOKEN_SECRET is undefined");
-        }
-
+        const userid = socket.handshake.auth.userid;
         if (roomToken) {
-            const session = jwt.verify(
-                roomToken,
-                secret,
-                {
-                    algorithms: ["HS256"]
-                }
-            ) as SessionPayload;
+            const session = verifyRoomAccessToken(roomToken, userid);
 
             if (
                 !(await redisRoomHandler.checkGameStarted(session.roomid)) ||
@@ -52,10 +34,15 @@ export const socketAuth = async (
                 return;
             }
 
+            const player = await redisRoomHandler.getUser(session.userid);
+            const participants = await redisRoomHandler.getUsers(session.roomid);
+            if (player.roomid !== session.roomid || !participants.some(user => user.userid === session.userid)) {
+                throw new Error("Authentication error");
+            }
             socket.session = session;
 
-            if (typeof auctionIndex === "string") {
-                socket.auctionIndex = auctionIndex;
+            if (normalizedIndex !== undefined) {
+                socket.auctionIndex = normalizedIndex;
             }
 
             next();
@@ -67,7 +54,6 @@ export const socketAuth = async (
         const rawCookie: string = socket.handshake.headers.cookie || "";
         const parsedCookies = cookie.parse(rawCookie);
 
-        const userid = socket.handshake.auth.userid as string;
         const accessToken: string | undefined =
             parsedCookies[`token_${userid}`];
 
@@ -76,18 +62,18 @@ export const socketAuth = async (
             return;
         }
 
-        const user = jwt.verify(accessToken, secret);
+        const user = verifyAccessToken(accessToken, userid);
 
         socket.user = user;
 
-        if (typeof auctionIndex === "string") {
-            socket.auctionIndex = auctionIndex;
+        if (normalizedIndex !== undefined) {
+            socket.auctionIndex = normalizedIndex;
         }
 
         next();
 
     } catch (error) {
         console.error("Socket authentication error:", error);
-        next(new Error("Authentication error"));
+        next(error instanceof InvalidAuctionIndexError ? error : new Error("Authentication error"));
     }
 };

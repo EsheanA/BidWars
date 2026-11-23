@@ -1,29 +1,14 @@
-import { Server, Socket } from "socket.io";
+import { Server } from "socket.io";
 import { Server as HttpServer } from "http";
 import { CorsOptions } from "cors";
-import { JwtPayload } from "jsonwebtoken";
+import type { AuthSocket } from "./types";
+
+import { assertAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
 
 import { socketAuth } from "./auth";
 import { handleGameLogic } from "./GameLogic";
 import redisRoomHandler from "../RedisRooms/RoomHandler";
 import { generateRoomAccessToken } from "../tokenHandling/generateToken";
-
-interface SessionPayload extends JwtPayload {
-    userid: string;
-    username: string;
-    roomid: string;
-}
-
-interface UserPayload extends JwtPayload {
-    userid: string;
-    username: string;
-}
-
-interface AuthSocket extends Socket {
-    session?: SessionPayload;
-    user?: UserPayload;
-    auctionIndex?: number;
-}
 
 async function initSocket(
     server: HttpServer,
@@ -57,8 +42,14 @@ async function initSocket(
                 roomID = roomid;
 
                 const user = await redisRoomHandler.getUser(userid);
+                const participants = await redisRoomHandler.getUsers(roomid);
+                if (user.roomid !== roomid || !participants.some(participant => participant.userid === userid)) {
+                    throw new Error("Authentication error");
+                }
 
-                socket.join(roomid);
+                await socket.join(roomid);
+                socket.data.userid = userid;
+                socket.data.roomid = roomid;
 
                 if (user != null) {
                     await redisRoomHandler.toggleSingleUserActiveStatus(userid);
@@ -69,9 +60,7 @@ async function initSocket(
                     throw new Error("Socket user is undefined");
                 }
 
-                if (!auctionIndex) {
-                    throw new Error("Auction index is undefined");
-                }
+                assertAuctionIndex(auctionIndex);
 
                 const { userid, username } = socket.user;
 
@@ -84,8 +73,15 @@ async function initSocket(
                 );
 
                 roomID = roomid;
+                const player = await redisRoomHandler.getUser(userid);
+                const users = await redisRoomHandler.getUsers(roomid);
+                if (player.roomid !== roomid || !users.some(participant => participant.userid === userid)) {
+                    throw new Error("Authentication error");
+                }
 
-                socket.join(roomid);
+                await socket.join(roomid);
+                socket.data.userid = userid;
+                socket.data.roomid = roomid;
 
                 const roomToken = generateRoomAccessToken(
                     { _id: userid, username },
@@ -95,8 +91,6 @@ async function initSocket(
                 io.to(socket.id).emit("room token", {
                     roomToken
                 });
-
-                const users = await redisRoomHandler.getUsers(roomid);
 
                 console.log("users: " + users);
 
@@ -119,7 +113,7 @@ async function initSocket(
 
             socket.emit(
                 "error message",
-                "Room not found or full"
+                error instanceof InvalidAuctionIndexError ? error.message : "Room not found or full"
             );
         }
 
