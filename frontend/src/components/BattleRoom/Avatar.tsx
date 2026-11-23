@@ -6,15 +6,16 @@ interface AvatarProps{
   name: string,
   self: boolean,
   bidOptions: Array<number>,
-  makeBid: (value : number, player_id : number) => void,
+  makeBid: (value: number) => void,
+  biddingOpen: boolean,
   highestBidder: BR.HighestBidder | null,
   user: BR.User
 };
-function Avatar({name, self, bidOptions, makeBid, highestBidder, user} : AvatarProps) {
+function Avatar({name, self, bidOptions, makeBid, highestBidder, user, biddingOpen} : AvatarProps) {
     const [readyBid, setReadyBid] = useState(false)
     const buttons = bidOptions?.map(butt =>{
       return(
-        <button className = "bidButton" onClick = {()=>makeBid(butt, user.userid)}>${JSON.stringify(butt)}</button>
+        <button key={butt} disabled={!biddingOpen} className = "bidButton" onClick = {()=>makeBid(butt)}>${JSON.stringify(butt)}</button>
       )
     })
     return (
@@ -25,7 +26,7 @@ function Avatar({name, self, bidOptions, makeBid, highestBidder, user} : AvatarP
           <div className = "centered">{name}</div>
           <div className = "bidButtons">
             {readyBid ? buttons : <span/>}
-            {self ? <button className = "bidButton main" onClick ={()=>setReadyBid(!readyBid)}>BID</button> : <span/>}
+            {self ? <button disabled={!biddingOpen} className = "bidButton main" onClick ={()=>setReadyBid(!readyBid)}>BID</button> : <span/>}
           </div>
         </div>
         

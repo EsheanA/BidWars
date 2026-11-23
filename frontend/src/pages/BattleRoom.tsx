@@ -24,6 +24,10 @@ function BattleRoom(){
         const [timer, setTimer] = useState<number | null>(null);
         const [announcement, setAnnouncement] = useState("");
         const [bidOptions, setBidOptions] = useState<number[]>([]);
+        const [roundState, setRoundState] = useState<'waiting' | 'bidding' | 'preparing' | 'complete'>('waiting');
+        const activeRound = useRef<BR.SetItemPayload['timing']>(undefined);
+        const countdownZero = useRef<{ round: number; at: number } | null>(null);
+        const clientId = useRef(crypto.randomUUID());
 
     useEffect(() => {
         let roomToken : string | null = localStorage.getItem("roomtoken");
@@ -63,7 +67,21 @@ function BattleRoom(){
         )
 
         socket.current.on("setItem", (data : string) => {
+            const receivedAt = performance.now();
             const parsedData = JSON.parse(data) as BR.SetItemPayload;
+            const timing = parsedData.timing;
+            if (timing && timing.round > 1 && (import.meta.env.VITE_ROUND_TIMING_LOGS === 'true' ||
+                (import.meta.env.DEV && import.meta.env.VITE_ROUND_TIMING_LOGS !== 'false'))) {
+                const zero = countdownZero.current;
+                const observed = zero?.round === timing.round - 1;
+                console.info(JSON.stringify({ timestamp: new Date().toISOString(), event: 'round.transition.received',
+                    ...timing, clientId: clientId.current,
+                    countdownZeroToItemReceivedMs: observed ? receivedAt - zero.at : null,
+                    ...(!observed && { reason: 'countdownZeroNotObserved' }) }));
+            }
+            activeRound.current = timing;
+            countdownZero.current = null;
+            setRoundState('bidding');
             const {name, value, description, audio_url, img_url, bid, range, rarity} = parsedData.item;
             setItemForBid({name, value, description, audio_url, img_url, range, rarity});
             setHighestBidder(null);
@@ -75,6 +93,10 @@ function BattleRoom(){
             playAudio(audio_url);
             
         })
+        socket.current.on('round status', (data: { state: 'preparing' | 'complete' }) => {
+            setRoundState(data.state);
+            setTimer(0);
+        });
         socket.current.on("current bid", (data : BR.CurrentBidPayload) => {
             if(data){
                 console.log(data)
@@ -121,6 +143,9 @@ function BattleRoom(){
             return;
         if (timer > 0) {
             const timeout = setTimeout(() => {
+              if (timer === 1 && activeRound.current) {
+                countdownZero.current = { round: activeRound.current.round, at: performance.now() };
+              }
               setTimer(prev => prev !== null ? prev - 1 : null);
             }, 1000);
             return () => clearTimeout(timeout);
@@ -128,7 +153,7 @@ function BattleRoom(){
         }, [timer])
 
     const makeBid = (value : number) : void =>{
-        if(itemForBid && socket.current !== null){
+        if(roundState === 'bidding' && timer !== null && timer > 0 && itemForBid && socket.current !== null){
             socket.current.emit("bid", {bid: highestBid+value})
         }
     }
@@ -142,12 +167,14 @@ function BattleRoom(){
                 name = {u.username} 
                 self = {u.userid === user?.userid ? true: false} 
                 bidOptions = {bidOptions}
+                biddingOpen = {roundState === 'bidding' && timer !== null && timer > 0}
             />
         )
     })
     return(
         <div className = "BattleRoom">
             <div className = "Balance">Balance: ${balance}  {timer && timer != 0 ? ` Time Left: ${timer}`: ""}</div>
+            {roundState === 'preparing' && <div role="status">Preparing next item…</div>}
             <Spotlight item = {itemForBid} announcement = {announcement} highestBid = {highestBid} timer = {timer} />
 
             <div className = "AvatarSpread">
