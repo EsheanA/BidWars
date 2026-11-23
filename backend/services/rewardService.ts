@@ -2,6 +2,7 @@ import crypto from "crypto";
 import ItemModel from "../models/Item";
 import User from "../models/User";
 import { RoomRepository } from "../repositories/roomRepository";
+import { failCurrentTransition } from '../logging/roundTiming';
 
 export class RewardService {
     constructor(private readonly rooms: RoomRepository) {}
@@ -35,6 +36,7 @@ export class RewardService {
             }
             await User.findByIdAndUpdate(bidder_id, { $inc: { balance: -1 * bid } });
         } catch (error) {
+            failCurrentTransition(error);
             console.error("Error distributing item: ", error);
         }
     }

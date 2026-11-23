@@ -6,7 +6,7 @@ import type { AuthSocket } from "./types";
 import { assertAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
 
 import { socketAuth } from "./auth";
-import { handleGameLogic } from "./GameLogic";
+import { handleGameLogic, cancelAbandonedGame } from "./GameLogic";
 import redisRoomHandler from "../RedisRooms/RoomHandler";
 import { generateRoomAccessToken } from "../tokenHandling/generateToken";
 
@@ -118,6 +118,7 @@ async function initSocket(
         }
 
         socket.on("disconnect", async (): Promise<void> => {
+            if (roomID) cancelAbandonedGame(io, roomID);
             try {
                 console.log("left");
 

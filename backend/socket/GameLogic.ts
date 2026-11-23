@@ -1,11 +1,10 @@
-import { Server, Socket} from "socket.io";
-import { type Item } from "../types/Auction";
-import type { AuthSocket } from "./types";
-import redisRoomHandler from "../RedisRooms/RoomHandler";
-
-interface BidPayload {
-    bid: number;
-}
+import { randomUUID } from 'node:crypto';
+import type { Server, Socket } from 'socket.io';
+import type { Item } from '../types/Auction';
+import type { AuthSocket } from './types';
+import type { PreparedItem } from '../services/auctionService';
+import { RoundTransition, timingLog, withTransition, type TimingContext } from '../logging/roundTiming';
+import redisRoomHandler from '../RedisRooms/RoomHandler';
 
 interface PreGameData {
     rounds: number;
@@ -13,171 +12,192 @@ interface PreGameData {
     item_data: Item;
     bid_options: number[];
 }
-
-async function itemBid(
-    roomid: string,
-    item: Item,
-    io: Server,
-    sockets: Socket[],
-    handlerFor: (socket: Socket) => (data: unknown) => void,
-    round: () => Promise<void>,
-    secs: number
-): Promise<void> {
-    try {
-        const users = await redisRoomHandler.toggleUsersActiveStatus(roomid);
-
-        io.to(roomid).emit("user list", {
-            userlist: users
-        });
-
-        io.to(roomid).emit(
-            "setItem",
-            JSON.stringify({
-                item,
-                timer: secs
-            })
-        );
-
-        setTimeout(() => {
-            void round();
-        }, secs * 1000);
-
-        for (let i = 0; i < sockets.length; i++) {
-            const socket = sockets[i];
-            if (!socket) continue;
-            const handler = handlerFor(socket);
-            socket.off("bid", handler);
-            socket.on("bid", handler);
-        }
-
-    } catch (error) {
-        console.error("error with itemBid: ", error);
-    }
+interface Preparation {
+    context: TimingContext;
+    promise: Promise<PreparedItem | undefined>;
+    prepared?: PreparedItem;
+    consumed: boolean;
+    activating: boolean;
+    discarded: boolean;
 }
 
-const handleBid = async (
-    socket: AuthSocket,
-    roomid: string,
-    payload: unknown,
-    io: Server
-): Promise<void> => {
+// Runtime ownership also prevents two local loops preparing for the same room.
+const games = new Map<string, () => void>();
+export function cancelAbandonedGame(io: Server, roomId: string): void {
+    if (!Array.from(io.sockets.sockets.values()).some(socket => socket.rooms.has(roomId))) games.get(roomId)?.();
+}
+
+async function handleBid(socket: AuthSocket, roomId: string, payload: unknown, io: Server): Promise<void> {
     try {
         const userid = socket.data.userid;
-        if (!userid || socket.data.roomid !== roomid || !socket.rooms.has(roomid) ||
-            !payload || typeof payload !== "object" || !("bid" in payload)) return;
-        const { bid } = payload as BidPayload;
-        const data = await redisRoomHandler.handleBid(userid, bid, roomid) as {userid: string, bid: number, roomid: string};
-
-        if (data.userid === userid && data.roomid === roomid) {
-            io.to(data.roomid).emit("current bid", {
-                bidder_id: data.userid,
-                bid,
-                bid_message: `I bid $${bid}, skibidi`
-            });
+        if (!userid || socket.data.roomid !== roomId || !socket.rooms.has(roomId) ||
+            !payload || typeof payload !== 'object' || !('bid' in payload)) return;
+        const { bid } = payload as { bid: number };
+        const data = await redisRoomHandler.handleBid(userid, bid, roomId);
+        if (data.userid === userid && data.roomid === roomId) {
+            io.to(roomId).emit('current bid', { bidder_id: userid, bid, bid_message: `I bid $${bid}, skibidi` });
         }
-
     } catch (error) {
         console.error(error);
     }
-};
-
-async function handleGameLogic(
-    io: Server,
-    roomid: string
-): Promise<void> {
-    try {
-        const pregame_data =
-            await redisRoomHandler.getPreGameData(roomid);
-
-        const {
-            rounds,
-            max_balance,
-            item_data,
-            bid_options
-        } = JSON.parse(pregame_data) as PreGameData;
-
-        let new_item: Item = item_data;
-
-        const secs: number = 20;
-
-        const handlers = new Map<Socket, (data: unknown) => void>();
-        const handlerFor = (socket: Socket) => {
-            let handler = handlers.get(socket);
-            if (!handler) {
-                handler = (payload: unknown) => { void handleBid(socket as AuthSocket, roomid, payload, io); };
-                handlers.set(socket, handler);
-            }
-            return handler;
-        };
-
-        io.to(roomid).emit("begin_game", {
-            balance: max_balance,
-            bidOptions: bid_options
-        });
-
-        let current_round: number = rounds;
-
-        await redisRoomHandler.startGame(roomid);
-
-        const round = async (): Promise<void> => {
-            try {
-                const sockets: Socket[] = Array.from(io.sockets.sockets.values()).filter(socket => socket.rooms.has(roomid));
-
-                console.log("Round: ", current_round);
-
-
-                if (current_round !== rounds && current_round >= 0) {
-                    await redisRoomHandler.distributeItemDB(roomid);
-
-                    const data =
-                        await redisRoomHandler.logItem(roomid);
-
-                    if (data.userid) {
-                        const { balance, userid } = data;
-
-                        io.to(roomid).emit("updated_balance", {
-                            balance,
-                            userid
-                        });
-                    }
-                }
-
-                if (current_round <= 0) {
-                    setTimeout(() => {
-                        console.log("game over");
-                        io.in(roomid).disconnectSockets();
-                    }, 6 * 1000);
-
-                } else {
-
-                    if (current_round !== rounds) {
-                        new_item = await redisRoomHandler.setItem(roomid) as Item;
-                    }
-
-
-                    await itemBid(
-                        roomid,
-                        new_item,
-                        io,
-                        sockets,
-                        handlerFor,
-                        round,
-                        secs
-                    );
-
-                    current_round -= 1;
-                }
-
-            } catch (error) {
-                console.error("Round error: ", error);
-            }
-        };
-
-        await round();
-
-    } catch (error) {
-        console.error("Game logic error: ", error);
-    }
 }
 
-export { handleGameLogic };
+export async function handleGameLogic(io: Server, roomId: string): Promise<void> {
+    if (games.has(roomId)) return;
+    const gameId = randomUUID();
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const handlers = new Map<Socket, (payload: unknown) => void>();
+    const bids = new Set<Promise<void>>();
+    let active = true;
+    let bidding = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let pending: Preparation | undefined;
+    let initialUndelivered: Pick<PreparedItem, 'item'> | undefined;
+    const contextFor = (round: number): TimingContext => ({ roomId, gameId, round, transitionId: randomUUID() });
+    const initial = contextFor(1);
+
+    const discardMedia = (prepared: Pick<PreparedItem, 'item'>, context: TimingContext) => {
+        void redisRoomHandler.discardPreparedItem(prepared).catch(error => {
+            timingLog('item.preparation.cleanup.failed', context, { errorType: error instanceof Error ? error.name : 'UnknownError' });
+        });
+    };
+    const discardInitial = () => {
+        if (!initialUndelivered) return;
+        discardMedia(initialUndelivered, initial);
+        initialUndelivered = undefined;
+    };
+
+    const discard = (preparation: Preparation) => {
+        if (!preparation.prepared || preparation.consumed || preparation.activating || preparation.discarded) return;
+        preparation.discarded = true;
+        discardMedia(preparation.prepared, preparation.context);
+    };
+    const stop = (reason: string) => {
+        if (!active) return;
+        active = false;
+        bidding = false;
+        controller.abort();
+        clearTimeout(timer);
+        for (const [socket, handler] of handlers) socket.off('bid', handler);
+        if (pending) discard(pending);
+        discardInitial();
+        timingLog('game.stopped', pending?.context ?? initial, { reason });
+        games.delete(roomId);
+    };
+    games.set(roomId, () => stop('abandoned'));
+
+    const beginPreparation = (round: number): Preparation => {
+        const preparation: Preparation = {
+            context: contextFor(round), consumed: false, activating: false, discarded: false,
+            promise: Promise.resolve(undefined)
+        };
+        // Attach rejection handling immediately, even though the boundary is twenty seconds away.
+        preparation.promise = redisRoomHandler.prepareItem(preparation.context, signal).then(prepared => {
+            preparation.prepared = prepared;
+            if (!active) discard(preparation);
+            return prepared;
+        }).catch(error => {
+            if (active) {
+                timingLog('game.preparation.failed', preparation.context, { errorType: error instanceof Error ? error.name : 'UnknownError' });
+                stop('preparationFailed');
+            }
+            return undefined;
+        });
+        return preparation;
+    };
+
+    try {
+        const data = JSON.parse(await redisRoomHandler.getPreGameData(roomId, signal, initial)) as PreGameData;
+        initialUndelivered = { item: data.item_data };
+        if (!active) { discardInitial(); return; }
+        await redisRoomHandler.startGame(roomId);
+        if (!active) return;
+        io.to(roomId).emit('begin_game', { balance: data.max_balance, bidOptions: data.bid_options });
+
+        const openItem = async (item: Item, round: number, context: TimingContext, trace?: RoundTransition, hadWinner = false): Promise<void> => {
+            const refresh = () => redisRoomHandler.toggleUsersActiveStatus(roomId);
+            const users = trace ? await trace.measure('presenceRefresh', refresh) : await refresh();
+            if (!active) return;
+            io.to(roomId).emit('user list', { userlist: users });
+            for (const socket of io.sockets.sockets.values()) {
+                if (!socket.rooms.has(roomId) || handlers.has(socket)) continue;
+                const handler = (payload: unknown) => {
+                    if (!bidding) return;
+                    const task = handleBid(socket as AuthSocket, roomId, payload, io);
+                    bids.add(task);
+                    void task.finally(() => bids.delete(task));
+                };
+                handlers.set(socket, handler);
+                socket.on('bid', handler);
+            }
+            bidding = true;
+            io.to(roomId).emit('setItem', JSON.stringify({ item, timer: 20, timing: context }));
+            if (round === 1) initialUndelivered = undefined;
+            trace?.complete(hadWinner); // Gap ends at delivery, not after background work.
+            timer = setTimeout(() => { void finishRound(round); }, 20000);
+            if (round < data.rounds) pending = beginPreparation(round + 1);
+        };
+
+        const finishRound = async (round: number): Promise<void> => {
+            if (!active) return;
+            bidding = false;
+            const upcoming = pending;
+            const final = round === data.rounds;
+            const context = final ? contextFor(round) : upcoming?.context ?? contextFor(round + 1);
+            const trace = new RoundTransition(context, round, final ? null : round + 1);
+            if (!final && upcoming) {
+                const boundaryAt = performance.now();
+                const ready = Boolean(upcoming.prepared);
+                timingLog('item.preparation.boundary', context, { ready });
+                void upcoming.promise.then(prepared => {
+                    if (prepared && active) timingLog('item.preparation.boundary.ready', context, {
+                        remainingFromBoundaryMs: ready ? 0 : performance.now() - boundaryAt
+                    });
+                });
+            }
+            io.to(roomId).emit('round status', { state: final ? 'complete' : 'preparing', ...context });
+            try {
+                await withTransition(trace, async () => {
+                    const settled = await trace.measure('settlement', async () => {
+                        // A bid already accepted during this round finishes before settlement reads it.
+                        await Promise.all(bids);
+                        await redisRoomHandler.distributeItemDB(roomId);
+                        return redisRoomHandler.logItem(roomId);
+                    });
+                    if (!active) return;
+                    if (settled.userid) io.to(roomId).emit('updated_balance', settled);
+                    if (final) {
+                        trace.complete(Boolean(settled.userid));
+                        stop('completed');
+                        setTimeout(() => io.in(roomId).disconnectSockets(), 6000);
+                        return;
+                    }
+                    if (!upcoming) throw new Error('Missing preparation for upcoming round');
+                    const prepared = await trace.measure('preparationWait', () => upcoming.promise);
+                    if (!active || !prepared) return;
+                    upcoming.activating = true;
+                    let item: Item;
+                    try {
+                        item = await trace.measure('activation', () => redisRoomHandler.activatePreparedItem(context, prepared, signal));
+                        upcoming.consumed = true;
+                    } finally {
+                        upcoming.activating = false;
+                        if (!active) discard(upcoming);
+                    }
+                    if (!active) return;
+                    await openItem(item, round + 1, context, trace, Boolean(settled.userid));
+                });
+            } catch (error) {
+                trace.fail(error);
+                console.error('Round error:', error instanceof Error ? error.name : 'UnknownError');
+                stop('roundFailed');
+            }
+        };
+
+        await openItem(data.item_data, 1, initial);
+    } catch (error) {
+        console.error('Game logic error:', error instanceof Error ? error.name : 'UnknownError');
+        stop('startupFailed');
+    }
+}
