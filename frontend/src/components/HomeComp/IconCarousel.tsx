@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../../config/server.js';
 
 const defaultIcons = ["🔥", "🚀", "🎯", "💡"];
 

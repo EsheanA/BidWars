@@ -7,7 +7,7 @@ import {AppContext} from '../AppContext/context.js';
 import {useContext} from 'react';
 import { useNavigate } from 'react-router-dom';
 import {type User} from "../types/User.js"
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../config/server.js';
 
 function Registration(){
     const context = useContext(AppContext);

@@ -1,7 +1,7 @@
 import {useState, useContext} from 'react'
 import { AppContext } from '../../AppContext/context.js'
 import { type Inventory } from '../../types/Inventory.js';
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../../config/server.js';
 
 interface ItemCardProps{
     setItems: React.Dispatch<React.SetStateAction<Array<Inventory.Item>>>

@@ -2,7 +2,7 @@ import {AppContext} from '../AppContext/context.js';
 import {useContext} from 'react';
 import { Link } from "react-router";
 import { useNavigate } from 'react-router';
-const apiUrl = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiUrl } from '../config/server.js';
 
 function Nav() {
 

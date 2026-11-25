@@ -5,7 +5,7 @@ import { AppContext } from '../AppContext/context.js';
 import { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { type Inventory } from '../types/Inventory.js';
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../config/server.js';
 
 function Inventory() {
     const context = useContext(AppContext);
