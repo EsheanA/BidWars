@@ -19,6 +19,8 @@ function isolateServices() {
     vi.stubEnv('ROUND_TIMING_DETAILS', 'false');
     vi.stubEnv('ITEM_PREPARATION_RETRY_MS', '1000');
     vi.stubEnv('ITEM_PREPARATION_RETRY_CAP_MS', '10000');
+    vi.stubEnv('CORS_ALLOWED_ORIGINS', undefined);
+    vi.stubEnv('NODE_ENV', 'test');
     vi.spyOn(console, 'log').mockImplementation(() => {
     });
     vi.spyOn(console, 'error').mockImplementation(() => {

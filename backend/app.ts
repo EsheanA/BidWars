@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
-import cors, { CorsOptions } from "cors";
+import cors from "cors";
+import { createCorsOptions } from "./config/cors";
 import { verifyAccessToken } from "./tokenHandling/verifyToken";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -9,6 +10,9 @@ import auctionRouter from "./routes/auctionRoutes";
 
 const app = express();
 
+export const corsOpts = createCorsOptions();
+app.use(cors(corsOpts));
+
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 app.use(
@@ -17,7 +21,6 @@ app.use(
         maxAge: ONE_DAY,
         etag: true,
         setHeaders(res) {
-            res.setHeader("Access-Control-Allow-Origin", "*");
             res.setHeader("Accept-Ranges", "bytes");
             res.setHeader(
                 "Cache-Control",
@@ -36,52 +39,6 @@ app.use(
     "/GoldSVGs",
     express.static(path.join(__dirname, "GoldSVGs"))
 );
-
-function isAllowedOrigin(origin: string | undefined): boolean {
-    if (!origin) {
-        return true;
-    }
-
-    try {
-        const u = new URL(origin);
-
-        return (
-            u.hostname === "localhost" &&
-            (u.protocol === "http:" || u.protocol === "https:")
-        );
-    } catch (err) {
-        return false;
-    }
-}
-
-export const corsOpts: CorsOptions = {
-    origin(origin, callback) {
-        if (isAllowedOrigin(origin)) {
-            return callback(null, true);
-        }
-
-        return callback(new Error("Not allowed by CORS"));
-    },
-
-    credentials: true,
-
-    methods: [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS"
-    ],
-
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization"
-    ],
-
-    optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOpts));
 
 app.use(express.json());
 app.use(cookieParser());
