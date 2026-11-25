@@ -70,6 +70,63 @@ Configure the required environment variables, then run both development servers:
 npm run dev
 ```
 
+### Backend startup and shutdown
+
+Compiled backend output is generated locally and is not tracked in Git. For a
+production build, run `npm run build --prefix backend`, then
+`npm start --prefix backend`.
+
+The backend binds to `0.0.0.0` using `PORT` (default `3000` when unset).
+An explicitly supplied port must be an integer from `1` to `65535`.
+MongoDB and Redis/socket initialization finish before the HTTP listener opens.
+Initial Redis connection attempts are limited to 10 seconds; startup failures
+close resources and leave the process with a nonzero exit status.
+
+On `SIGTERM` or `SIGINT`, the server stops accepting players, cancels round timers
+and item preparation, and drains existing HTTP/socket/game work before closing
+Redis and MongoDB. Shutdown runs once even if multiple signals arrive. A failed
+cleanup or an 8-second shutdown timeout terminates the process unsuccessfully.
+Active games are interrupted by shutdown; their runtime state is not resumed
+automatically after a restart.
+
+### Frontend origins and backend URLs
+
+Set `CORS_ALLOWED_ORIGINS` on the backend to the exact frontend origins that may
+make browser requests, separated by commas. For example:
+
+```dotenv
+NODE_ENV=production
+CORS_ALLOWED_ORIGINS=https://bidwars.example,https://preview.bidwars.example
+```
+
+Production requires a nonempty list. Development also allows HTTP/HTTPS localhost
+origins so the existing local setup keeps working. Include protocol and any
+non-default port; paths, credentials and wildcards are rejected. Root trailing
+slashes are normalized. The same credentialed policy applies to HTTP requests,
+Socket.IO and static assets. Requests without an Origin header remain allowed;
+authentication still applies to protected operations.
+
+Set the frontend's `VITE_SERVER_BASE_URL` to the backend origin before starting
+Vite or building the frontend. API requests, sockets, audio and backend images all
+use this setting. For example, in your local frontend environment:
+
+```dotenv
+VITE_SERVER_BASE_URL=http://localhost:3000
+```
+
+For deployment, replace that value with your backend's HTTPS origin. This is a
+frontend build-time setting, so rebuild after changing it. Use an origin without
+an API path, query, credentials or fragment; a root trailing slash is supported.
+The `.example` domains above are placeholders, not deployed services.
+
+Run the isolated frontend URL checks from the frontend directory:
+
+```bash
+npx --no-install playwright test tests/serverUrls.spec.ts --workers=1
+```
+
+These tests use no browsers, development servers or external services.
+
 ### Preparing the next auction item
 
 Each game prepares one future item while the current item is open for its usual
