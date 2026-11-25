@@ -29,12 +29,25 @@ const rewards = new RewardService(repository);
 // Keep the existing socket API while each service owns its own behavior.
 const redisRoomHandler = {
     async initClient(): Promise<void> {
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         try {
-            await client.connect();
-        } catch (error) {
-            console.error(error);
-            throw error;
+            await Promise.race([
+                client.connect(),
+                new Promise<never>((_, reject) => {
+                    timeout = setTimeout(() => {
+                        if (client.isOpen) client.destroy();
+                        reject(new Error('Redis startup timed out'));
+                    }, 10000);
+                })
+            ]);
+        } finally {
+            clearTimeout(timeout);
         }
+    },
+    async closeClient(force = false): Promise<void> {
+        if (!client.isOpen) return;
+        if (force || !client.isReady) client.destroy();
+        else await client.close();
     },
     getUser: rooms.getUser.bind(rooms),
     userExist: rooms.userExist.bind(rooms),

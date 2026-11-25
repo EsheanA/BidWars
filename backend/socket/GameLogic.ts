@@ -22,7 +22,23 @@ interface Preparation {
 }
 
 // Runtime ownership also prevents two local loops preparing for the same room.
-const games = new Map<string, () => void>();
+const games = new Map<string, (reason?: string) => void>();
+const work = new Set<Promise<unknown>>();
+const gameOverTimers = new Set<ReturnType<typeof setTimeout>>();
+
+function track<T>(task: Promise<T>): Promise<T> {
+    work.add(task);
+    void task.then(() => work.delete(task), () => work.delete(task));
+    return task;
+}
+
+export async function stopAllGames(): Promise<void> {
+    for (const stop of games.values()) stop('shutdown');
+    for (const timer of gameOverTimers) clearTimeout(timer);
+    gameOverTimers.clear();
+    // Cancelling a provider may schedule media cleanup, so drain until no work remains.
+    while (work.size) await Promise.allSettled([...work]);
+}
 export function cancelAbandonedGame(io: Server, roomId: string): void {
     if (!Array.from(io.sockets.sockets.values()).some(socket => socket.rooms.has(roomId))) games.get(roomId)?.();
 }
@@ -42,7 +58,11 @@ async function handleBid(socket: AuthSocket, roomId: string, payload: unknown, i
     }
 }
 
-export async function handleGameLogic(io: Server, roomId: string): Promise<void> {
+export function handleGameLogic(io: Server, roomId: string): Promise<void> {
+    return track(runGame(io, roomId));
+}
+
+async function runGame(io: Server, roomId: string): Promise<void> {
     if (games.has(roomId)) return;
     const gameId = randomUUID();
     const controller = new AbortController();
@@ -58,9 +78,9 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
     const initial = contextFor(1);
 
     const discardMedia = (prepared: Pick<PreparedItem, 'item'>, context: TimingContext) => {
-        void redisRoomHandler.discardPreparedItem(prepared).catch(error => {
+        void track(redisRoomHandler.discardPreparedItem(prepared).catch(error => {
             timingLog('item.preparation.cleanup.failed', context, { errorType: error instanceof Error ? error.name : 'UnknownError' });
-        });
+        }));
     };
     const discardInitial = () => {
         if (!initialUndelivered) return;
@@ -85,7 +105,7 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
         timingLog('game.stopped', pending?.context ?? initial, { reason });
         games.delete(roomId);
     };
-    games.set(roomId, () => stop('abandoned'));
+    games.set(roomId, (reason = 'abandoned') => stop(reason));
 
     const beginPreparation = (round: number): Preparation => {
         const preparation: Preparation = {
@@ -93,7 +113,7 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
             promise: Promise.resolve(undefined)
         };
         // Attach rejection handling immediately, even though the boundary is twenty seconds away.
-        preparation.promise = redisRoomHandler.prepareItem(preparation.context, signal).then(prepared => {
+        preparation.promise = track(redisRoomHandler.prepareItem(preparation.context, signal).then(prepared => {
             preparation.prepared = prepared;
             if (!active) discard(preparation);
             return prepared;
@@ -103,7 +123,7 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
                 stop('preparationFailed');
             }
             return undefined;
-        });
+        }));
         return preparation;
     };
 
@@ -124,7 +144,7 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
                 if (!socket.rooms.has(roomId) || handlers.has(socket)) continue;
                 const handler = (payload: unknown) => {
                     if (!bidding) return;
-                    const task = handleBid(socket as AuthSocket, roomId, payload, io);
+                    const task = track(handleBid(socket as AuthSocket, roomId, payload, io));
                     bids.add(task);
                     void task.finally(() => bids.delete(task));
                 };
@@ -135,7 +155,7 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
             io.to(roomId).emit('setItem', JSON.stringify({ item, timer: 20, timing: context }));
             if (round === 1) initialUndelivered = undefined;
             trace?.complete(hadWinner); // Gap ends at delivery, not after background work.
-            timer = setTimeout(() => { void finishRound(round); }, 20000);
+            timer = setTimeout(() => { void track(finishRound(round)); }, 20000);
             if (round < data.rounds) pending = beginPreparation(round + 1);
         };
 
@@ -170,7 +190,11 @@ export async function handleGameLogic(io: Server, roomId: string): Promise<void>
                     if (final) {
                         trace.complete(Boolean(settled.userid));
                         stop('completed');
-                        setTimeout(() => io.in(roomId).disconnectSockets(), 6000);
+                        const timer = setTimeout(() => {
+                            gameOverTimers.delete(timer);
+                            io.in(roomId).disconnectSockets();
+                        }, 6000);
+                        gameOverTimers.add(timer);
                         return;
                     }
                     if (!upcoming) throw new Error('Missing preparation for upcoming round');

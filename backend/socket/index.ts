@@ -6,9 +6,15 @@ import type { AuthSocket } from "./types";
 import { assertAuctionIndex, InvalidAuctionIndexError } from "../auctions/auctionIndex";
 
 import { socketAuth } from "./auth";
-import { handleGameLogic, cancelAbandonedGame } from "./GameLogic";
+import { handleGameLogic, cancelAbandonedGame, stopAllGames } from "./GameLogic";
 import redisRoomHandler from "../RedisRooms/RoomHandler";
 import { generateRoomAccessToken } from "../tokenHandling/generateToken";
+
+const shutdowns = new WeakMap<Server, () => Promise<void>>();
+
+export function closeSocket(io: Server): Promise<void> {
+    return shutdowns.get(io)!();
+}
 
 async function initSocket(
     server: HttpServer,
@@ -24,9 +30,32 @@ async function initSocket(
         }
     });
 
+    let stopping = false;
+    let closing: Promise<void> | undefined;
+    const pending = new Set<Promise<void>>();
+    const track = (task: Promise<void>) => {
+        pending.add(task);
+        void task.then(() => pending.delete(task), () => pending.delete(task));
+        return task;
+    };
+    shutdowns.set(io, () => closing ??= (async () => {
+        stopping = true;
+        const gamesClosed = stopAllGames();
+        const socketsClosed = new Promise<void>((resolve, reject) => {
+            void io.close(error => {
+                if (error && (error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING') reject(error);
+                else resolve();
+            }).catch(reject);
+        });
+        const results = await Promise.allSettled([gamesClosed, socketsClosed]);
+        while (pending.size) await Promise.allSettled([...pending]);
+        for (const result of results) if (result.status === 'rejected') throw result.reason;
+    })());
+
     io.use(socketAuth);
 
-    io.on("connection", async (socket: AuthSocket) => {
+    const onConnection = async (socket: AuthSocket): Promise<void> => {
+        if (stopping) { socket.disconnect(true); return; }
         let userID: string | undefined;
         let roomID: string | undefined;
 
@@ -47,6 +76,7 @@ async function initSocket(
                     throw new Error("Authentication error");
                 }
 
+                if (stopping) return;
                 await socket.join(roomid);
                 socket.data.userid = userid;
                 socket.data.roomid = roomid;
@@ -79,6 +109,7 @@ async function initSocket(
                     throw new Error("Authentication error");
                 }
 
+                if (stopping) return;
                 await socket.join(roomid);
                 socket.data.userid = userid;
                 socket.data.roomid = roomid;
@@ -98,7 +129,7 @@ async function initSocket(
                     userlist: users
                 });
 
-                if (await redisRoomHandler.checkWhetherFull(roomid)) {
+                if (await redisRoomHandler.checkWhetherFull(roomid) && !stopping) {
                     console.log("Begin Game!");
                     void handleGameLogic(io, roomid);
                 }
@@ -117,7 +148,8 @@ async function initSocket(
             );
         }
 
-        socket.on("disconnect", async (): Promise<void> => {
+        const onDisconnect = async (): Promise<void> => {
+            if (stopping) return;
             if (roomID) cancelAbandonedGame(io, roomID);
             try {
                 console.log("left");
@@ -145,8 +177,10 @@ async function initSocket(
             } catch (error) {
                 console.error("Disconnect error:", error);
             }
-        });
-    });
+        };
+        socket.on('disconnect', () => track(onDisconnect()));
+    };
+    io.on('connection', (socket: AuthSocket) => track(onConnection(socket)));
 
     return io;
 }
