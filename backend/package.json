@@ -23,7 +23,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "tsx watch server.ts",
-    "build": "tsc && node scripts/copy-assets.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
