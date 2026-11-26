@@ -70,6 +70,14 @@ Configure the required environment variables, then run both development servers:
 npm run dev
 ```
 
+### Backend Docker image
+
+The backend has an Ubuntu 24.04 / Node 24 container setup; the frontend remains on
+Vercel. See [backend/DOCKER.md](backend/DOCKER.md) for image builds, disposable local
+MongoDB/Redis smoke checks, Cloud Run bucket-mount permissions, and Vercel settings.
+Use `backend/` as the Docker build context. Container builds exclude tests and
+local data using the production TypeScript config and Docker context allowlist.
+
 ### Backend startup and shutdown
 
 Compiled backend output is generated locally and is not tracked in Git. For a
