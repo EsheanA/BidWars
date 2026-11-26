@@ -1,6 +1,6 @@
 
 import {useState, useEffect,useRef} from 'react'
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverUrl } from '../../config/server.js';
 import Auctioneer from "./Auctioneer.js"
 import Item from "./Item.js"
 import { BR } from '../../types/BattleRoom.js';
@@ -72,7 +72,7 @@ function Spotlight({item, announcement, highestBid, timer} : SpotlightProps) {
     return (
       <>
         <div className = "Spotlight" style={{ display: visible ? "flex" : "none" }}>
-            <img ref={imgRef} src = {`/${apiURL}/` + item?.img_url} style = {{display: "none"}}/>
+            <img ref={imgRef} src = {item ? serverUrl(`GoldSVGs/${item.img_url}`) : undefined} style = {{display: "none"}}/>
             <img className = "Spotlight-img" src = "/images/spotlight.jpg"/>
             <Item item = {item} highestBid={highestBid} isImage = {isImage} />
         </div>

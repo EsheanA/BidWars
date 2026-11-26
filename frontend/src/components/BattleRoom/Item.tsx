@@ -1,4 +1,4 @@
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../../config/server.js';
 import { BR } from "../../types/BattleRoom.js";
 
 

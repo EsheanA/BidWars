@@ -8,12 +8,13 @@ import handler from '../RedisRooms/RoomHandler';
 const h = vi.mocked(handler);
 vi.mock('socket.io', () => ({ Server: vi.fn() }));
 vi.mock('./auth', () => ({ socketAuth: vi.fn() }));
-vi.mock('./GameLogic', () => ({ handleGameLogic: vi.fn(), cancelAbandonedGame: vi.fn() }));
+vi.mock('./GameLogic', () => ({ handleGameLogic: vi.fn(), cancelAbandonedGame: vi.fn(), stopAllGames: vi.fn() }));
 vi.mock('../tokenHandling/generateToken', () => ({ generateRoomAccessToken: vi.fn(() => 'room-token') }));
 import { Server } from 'socket.io';
-import { initSocket } from './index';
+import { initSocket, closeSocket } from './index';
 import { socketAuth } from './auth';
-import { handleGameLogic } from './GameLogic';
+import { handleGameLogic, stopAllGames } from './GameLogic';
+import { deferred } from '../test-support/fixtures';
 let f: ReturnType<typeof socketServer>, connected: Function;
 const http = {} as any, cors = { credentials: true };
 beforeEach(async () => {
@@ -23,6 +24,7 @@ beforeEach(async () => {
         return f.io as any;
     });
     h.initClient.mockResolvedValue();
+    vi.mocked(stopAllGames).mockResolvedValue();
     h.getUser.mockResolvedValue(user());
     h.findRoom.mockResolvedValue('r1');
     h.getUsers.mockResolvedValue(room().users);
@@ -164,4 +166,64 @@ it('rejects joining when the stored player no longer belongs to the selected roo
     expect(f.s.join).not.toHaveBeenCalled();
     expect(f.s.data.userid).toBe('');
     expect(f.io.events).toEqual([]);
+});
+
+function mockClose() {
+    const close = vi.fn(async (callback: (error?: Error) => void) => { callback(); });
+    Object.assign(f.io, { close });
+    return close;
+}
+
+it('closes sockets and HTTP, drains games, and rejects new players during shutdown, only once', async () => {
+    await join();
+    const close = mockClose();
+    const games = deferred<void>();
+    vi.mocked(stopAllGames).mockReturnValueOnce(games.promise);
+    const shuttingDown = closeSocket(f.io as any);
+    expect(closeSocket(f.io as any)).toBe(shuttingDown);
+    const newcomer = Object.assign(socket('new'), { disconnect: vi.fn() });
+    h.findRoom.mockClear();
+    await connected(newcomer);
+    await leave();
+    expect(newcomer.disconnect).toHaveBeenCalledWith(true);
+    expect(h.findRoom).not.toHaveBeenCalled();
+    expect(h.kickUser).not.toHaveBeenCalled();
+    expect(h.toggleSingleUserActiveStatus).not.toHaveBeenCalled();
+    games.resolve();
+    await shuttingDown;
+    expect(close).toHaveBeenCalledOnce();
+    expect(stopAllGames).toHaveBeenCalledOnce();
+});
+
+it('waits for a disconnect cleanup already in progress before declaring sockets drained', async () => {
+    await join();
+    mockClose();
+    const cleanup = deferred<void>();
+    h.kickUser.mockReturnValueOnce(cleanup.promise);
+    const leaving = leave();
+    await vi.waitFor(() => expect(h.kickUser).toHaveBeenCalledOnce());
+    let drained = false;
+    const closing = closeSocket(f.io as any).then(() => { drained = true; });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    cleanup.resolve();
+    await leaving;
+    await closing;
+    expect(h.getUsers).toHaveBeenCalled();
+    expect(drained).toBe(true);
+});
+
+it('tolerates closing a socket server before HTTP ever started listening', async () => {
+    mockClose().mockImplementationOnce(async callback => callback(Object.assign(new Error('not running'), { code: 'ERR_SERVER_NOT_RUNNING' })));
+    await expect(closeSocket(f.io as any)).resolves.toBeUndefined();
+});
+
+it('reports a failed socket close after waiting for game cleanup', async () => {
+    const failed = new Error('close failed');
+    mockClose().mockRejectedValueOnce(failed);
+    const games = deferred<void>();
+    vi.mocked(stopAllGames).mockReturnValueOnce(games.promise);
+    const closing = expect(closeSocket(f.io as any)).rejects.toBe(failed);
+    games.resolve();
+    await closing;
 });

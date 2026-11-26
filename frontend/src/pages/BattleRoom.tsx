@@ -6,7 +6,7 @@ import {AppContext} from '../AppContext/context.js'
 import {useContext} from 'react';
 import {useNavigate} from "react-router-dom"
 import { BR } from '../types/BattleRoom.js';
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL, serverUrl } from '../config/server.js';
 
 function BattleRoom(){
         const navigate = useNavigate();
@@ -127,7 +127,7 @@ function BattleRoom(){
     }, []);
 
     const playAudio = (filename : string) => {
-        const audio = new Audio(`http://localhost:3000/${filename}`);
+        const audio = new Audio(serverUrl(filename));
         
         audio.play().catch((err) => {
             console.error('Error playing audio:', err);

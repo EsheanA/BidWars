@@ -1,87 +1,37 @@
 import express, { Request, Response } from "express";
-import cors, { CorsOptions } from "cors";
+import cors from "cors";
+import { createCorsOptions } from "./config/cors";
 import { verifyAccessToken } from "./tokenHandling/verifyToken";
 import cookieParser from "cookie-parser";
 import path from "path";
+import { assetPaths } from "./config/assets";
+import { FileAudioStore, getAudioStore } from "./storage/audioStore";
+import { serveCloudAudio } from "./storage/cloudAudioMiddleware";
 
 import userRouter from "./routes/userRoutes";
 import auctionRouter from "./routes/auctionRoutes";
 
 const app = express();
 
-const ONE_DAY = 24 * 60 * 60 * 1000;
+export const corsOpts = createCorsOptions();
+app.use(cors(corsOpts));
 
-app.use(
-    "/audioFiles",
-    express.static(path.join(__dirname, "audioFiles"), {
-        maxAge: ONE_DAY,
-        etag: true,
-        setHeaders(res) {
-            res.setHeader("Access-Control-Allow-Origin", "*");
-            res.setHeader("Accept-Ranges", "bytes");
-            res.setHeader(
-                "Cache-Control",
-                "public, max-age=86400, immutable"
-            );
-        },
-    })
-);
+const audioStore = getAudioStore();
+app.use('/audioFiles', audioStore instanceof FileAudioStore ? express.static(audioStore.directory, {
+    maxAge: 24 * 60 * 60 * 1000,
+    etag: true,
+    setHeaders(res) { res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); }
+}) : serveCloudAudio(audioStore));
 
 app.use(
     "/BidWarsSVGs",
-    express.static(path.join(__dirname, "BidWarsSVGs"))
+    express.static(path.join(assetPaths().staticRoot, "BidWarsSVGs"))
 );
 
 app.use(
     "/GoldSVGs",
-    express.static(path.join(__dirname, "GoldSVGs"))
+    express.static(path.join(assetPaths().staticRoot, "GoldSVGs"))
 );
-
-function isAllowedOrigin(origin: string | undefined): boolean {
-    if (!origin) {
-        return true;
-    }
-
-    try {
-        const u = new URL(origin);
-
-        return (
-            u.hostname === "localhost" &&
-            (u.protocol === "http:" || u.protocol === "https:")
-        );
-    } catch (err) {
-        return false;
-    }
-}
-
-export const corsOpts: CorsOptions = {
-    origin(origin, callback) {
-        if (isAllowedOrigin(origin)) {
-            return callback(null, true);
-        }
-
-        return callback(new Error("Not allowed by CORS"));
-    },
-
-    credentials: true,
-
-    methods: [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS"
-    ],
-
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization"
-    ],
-
-    optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOpts));
 
 app.use(express.json());
 app.use(cookieParser());

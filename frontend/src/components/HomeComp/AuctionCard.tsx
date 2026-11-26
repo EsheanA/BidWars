@@ -4,7 +4,7 @@ import {AppContext} from '../../AppContext/context.js';
 import {useContext} from 'react';
 import {useNavigate} from 'react-router-dom';
 import { type Home } from "../../types/Home.js";
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../../config/server.js';
 
 
 interface AuctionCardProps{

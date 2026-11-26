@@ -2,14 +2,14 @@ import { boundaryIndexes, invalidInternalIndexes } from '../test-support/auction
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generated } from '../test-support/fixtures';
 const deps = vi.hoisted(() => ({
-    parse: vi.fn(), write: vi.fn(), pipeline: vi.fn(), fromWeb: vi.fn()
+    parse: vi.fn(), save: vi.fn(), remove: vi.fn(), fromWeb: vi.fn()
 }));
 vi.mock('openai', () => ({ default: vi.fn(function () {
         return { chat: { completions: { parse: deps.parse } } };
     }) }));
-vi.mock('fs', () => ({ createWriteStream: deps.write }));
-vi.mock('stream/promises', () => ({ pipeline: deps.pipeline }));
-vi.mock('node:fs/promises', () => ({ unlink: vi.fn(async () => {}) }));
+vi.mock('../storage/audioStore', async original => ({
+    ...await original<object>(), getAudioStore: () => ({ save: deps.save, remove: deps.remove })
+}));
 vi.mock('node:stream', () => ({ Readable: { fromWeb: deps.fromWeb } }));
 vi.mock('uuid', () => ({ v4: vi.fn() }));
 import { v4 } from 'uuid';
@@ -18,9 +18,9 @@ let fetchMock: any;
 beforeEach(() => {
     vi.clearAllMocks();
     deps.parse.mockResolvedValue({ choices: [{ message: { parsed: generated.item } }] });
-    deps.write.mockReturnValue({ output: true });
     deps.fromWeb.mockReturnValue({ audioStream: true });
-    deps.pipeline.mockResolvedValue(undefined);
+    deps.save.mockResolvedValue(undefined);
+    deps.remove.mockResolvedValue(undefined);
     vi.mocked(v4).mockReset().mockReturnValueOnce('id-one' as any).mockReturnValueOnce('id-two' as any);
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
     fetchMock = vi.fn(async () => ({ body: { audio: true }, ok: true }));
@@ -63,7 +63,7 @@ describe("callGrok item and speech generation", () => {
         it("should produce a distinct audio filename for separate generated items with the same name", async () => {
             const a = JSON.parse(await callGrok(0)), b = JSON.parse(await callGrok(0));
             expect(a.audio_url).not.toBe(b.audio_url);
-            expect(deps.write).toHaveBeenCalledWith(a.audio_url, { flags: 'wx' });
+            expect(deps.save).toHaveBeenCalledWith('Watch_id-one.mp3', expect.anything(), expect.any(AbortSignal));
         });
         it("should return JSON containing the item, category, rarity, audio URL, and category SVG filename", async () => {
             const result = JSON.parse(await callGrok(0));
@@ -74,7 +74,7 @@ describe("callGrok item and speech generation", () => {
         });
         it("should return the audio URL only after the mocked output stream finishes successfully", async () => {
             let finish!: () => void;
-            deps.pipeline.mockReturnValueOnce(new Promise<void>(r => {
+            deps.save.mockReturnValueOnce(new Promise<void>(r => {
                 finish = r;
             }));
             let done = false;
@@ -82,7 +82,7 @@ describe("callGrok item and speech generation", () => {
                 done = true;
                 return v;
             });
-            await vi.waitFor(() => expect(deps.pipeline).toHaveBeenCalled());
+            await vi.waitFor(() => expect(deps.save).toHaveBeenCalled());
             expect(done).toBe(false);
             finish();
             expect(JSON.parse(await task).audio_url).toContain('.mp3');
@@ -90,10 +90,8 @@ describe("callGrok item and speech generation", () => {
         it("should reject a failed speech request or failed audio-file write", async () => {
             fetchMock.mockRejectedValueOnce(new Error('speech offline'));
             await expect(callGrok(0)).rejects.toThrow('speech offline');
-            expect(deps.write).not.toHaveBeenCalled();
-            deps.write.mockImplementationOnce(() => {
-                throw new Error('disk full');
-            });
+            expect(deps.save).not.toHaveBeenCalled();
+            deps.save.mockRejectedValueOnce(new Error('disk full'));
             await expect(callGrok(0)).rejects.toThrow('disk full');
         });
     });
@@ -104,7 +102,7 @@ describe("callGrok item and speech generation", () => {
             }
             expect(deps.parse).not.toHaveBeenCalled();
             expect(fetchMock).not.toHaveBeenCalled();
-            expect(deps.write).not.toHaveBeenCalled();
+            expect(deps.save).not.toHaveBeenCalled();
             expect(Math.random).not.toHaveBeenCalled();
         });
     });
@@ -116,14 +114,11 @@ it.each(boundaryIndexes)('generates an item for boundary auction %s', async (ind
     expect(fetchMock).toHaveBeenCalledOnce();
 });
 
-it.each(['http error', 'missing body', 'stream failure'])('rejects %s and removes any incomplete audio file', async reason => {
-    const { unlink } = await import('node:fs/promises');
+it.each(['http error', 'missing body'])('rejects %s before storing audio', async reason => {
     if (reason === 'http error') fetchMock.mockResolvedValueOnce({ ok: false, body: { cancel: vi.fn(async () => {}) } });
     if (reason === 'missing body') fetchMock.mockResolvedValueOnce({ ok: true, body: null });
-    if (reason === 'stream failure') deps.pipeline.mockRejectedValueOnce(new Error('source stream failed'));
     await expect(generateAudio(generated)).rejects.toThrow();
-    expect(unlink).toHaveBeenCalledTimes(reason === 'stream failure' ? 1 : 0);
-    if (reason === 'stream failure') expect(unlink).toHaveBeenCalledWith('audioFiles/Watch_id-one.mp3');
+    expect(deps.save).not.toHaveBeenCalled();
 });
 
 it('passes cancellation to both providers and starts no work for an already cancelled request', async () => {
@@ -141,17 +136,9 @@ it('passes cancellation to both providers and starts no work for an already canc
     expect(fetchMock).toHaveBeenCalledOnce();
 });
 
-it('restricts cleanup to generated audio paths and tolerates files already removed', async () => {
-    const { unlink } = await import('node:fs/promises');
+it('rejects invalid cleanup paths before contacting storage', async () => {
     await expect(discardAudio('../private.mp3')).rejects.toThrow('Invalid prepared audio path');
-    expect(unlink).not.toHaveBeenCalled();
-    vi.mocked(unlink).mockRejectedValueOnce(Object.assign(new Error('missing'), { code: 'ENOENT' }));
-    await expect(discardAudio('audioFiles/Watch_id-one.mp3')).resolves.toBeUndefined();
-});
-
-it('does not delete a pre-existing file if exclusive creation fails', async () => {
-    const { unlink } = await import('node:fs/promises');
-    deps.pipeline.mockRejectedValueOnce(Object.assign(new Error('already exists'), { code: 'EEXIST' }));
-    await expect(generateAudio(generated)).rejects.toMatchObject({ code: 'EEXIST' });
-    expect(unlink).not.toHaveBeenCalled();
+    expect(deps.remove).not.toHaveBeenCalled();
+    await discardAudio('audioFiles/Watch_id-one.mp3');
+    expect(deps.remove).toHaveBeenCalledWith('Watch_id-one.mp3');
 });

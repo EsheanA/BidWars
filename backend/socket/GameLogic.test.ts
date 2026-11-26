@@ -5,7 +5,7 @@ vi.mock('../RedisRooms/RoomHandler', () => ({ default: {
     } }));
 import handler from '../RedisRooms/RoomHandler';
 const h = vi.mocked(handler);
-import { handleGameLogic, cancelAbandonedGame } from './GameLogic';
+import { handleGameLogic, cancelAbandonedGame, stopAllGames } from './GameLogic';
 import { AuctionService } from '../services/auctionService';
 import { RewardService } from '../services/rewardService';
 import { generated, repository, deferred } from '../test-support/fixtures';
@@ -31,7 +31,7 @@ beforeEach(() => {
 afterEach(async () => {
     f.s.rooms.clear();
     cancelAbandonedGame(f.io as any, 'r1');
-    await Promise.resolve();
+    await stopAllGames();
 });
 const start = () => handleGameLogic(f.io as any, 'r1');
 const tick = () => vi.advanceTimersByTimeAsync(20000);
@@ -311,4 +311,83 @@ it('finishes an already accepted bid before reading the item for settlement', as
     await vi.advanceTimersByTimeAsync(0);
     expect(h.logItem).toHaveBeenCalledOnce();
     expect(events('setItem')).toHaveLength(2);
+});
+
+it('stops all active games and waits for unused media cleanup before completing shutdown', async () => {
+    await start();
+    const second = socketServer();
+    second.s.rooms = new Set(['r2']);
+    await handleGameLogic(second.io as any, 'r2');
+    const cleanup = deferred<void>();
+    h.discardPreparedItem.mockReturnValueOnce(cleanup.promise);
+    let drained = false;
+    const stopping = stopAllGames().then(() => { drained = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.prepareItem.mock.calls).toHaveLength(2);
+    expect(h.prepareItem.mock.calls.every(([, signal]) => signal.aborted)).toBe(true);
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('"reason":"shutdown"'));
+    expect(drained).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    cleanup.resolve(); await stopping;
+    expect(drained).toBe(true);
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(events('setItem')).toHaveLength(1);
+    expect(second.io.events.filter(event => event.event === 'setItem')).toHaveLength(1);
+    expect(h.logItem).not.toHaveBeenCalled();
+});
+
+it('waits for a preparation finishing after shutdown and discards its result without activation', async () => {
+    const next = deferred<Awaited<ReturnType<typeof handler.prepareItem>>>();
+    h.prepareItem.mockReturnValueOnce(next.promise);
+    await start();
+    let drained = false;
+    const stopping = stopAllGames().then(() => { drained = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(drained).toBe(false);
+    next.resolve({ ...h.prepareItem.mock.calls[0]![0], auctionIndex: 0, item });
+    await stopping;
+    expect(h.discardPreparedItem).toHaveBeenCalledOnce();
+    expect(h.activatePreparedItem).not.toHaveBeenCalled();
+    expect(drained).toBe(true);
+});
+
+it('clears the delayed game-over disconnect during server shutdown', async () => {
+    await start(); await tick(); await tick(); await tick();
+    expect(vi.getTimerCount()).toBe(1);
+    await stopAllGames();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(f.disconnected).not.toHaveBeenCalled();
+});
+
+it('drains an accepted bid before completing server shutdown', async () => {
+    const bid = deferred<{ userid: string; roomid: string; bid: number }>();
+    h.handleBid.mockReturnValueOnce(bid.promise);
+    await start();
+    f.s.handlers.get('bid')!({ bid: 50 });
+    let drained = false;
+    const stopping = stopAllGames().then(() => { drained = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(drained).toBe(false);
+    bid.resolve({ userid: 'alice', roomid: 'r1', bid: 50 });
+    await stopping;
+    expect(drained).toBe(true);
+    expect(h.logItem).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+});
+
+it('lets settlement already in progress finish without opening another round during shutdown', async () => {
+    const settlement = deferred<{ userid: string; balance: number }>();
+    h.logItem.mockReturnValueOnce(settlement.promise);
+    await start(); await tick();
+    let drained = false;
+    const stopping = stopAllGames().then(() => { drained = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(drained).toBe(false);
+    settlement.resolve({ userid: 'alice', balance: 225 });
+    await stopping;
+    expect(drained).toBe(true);
+    expect(h.activatePreparedItem).not.toHaveBeenCalled();
+    expect(events('setItem')).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
 });

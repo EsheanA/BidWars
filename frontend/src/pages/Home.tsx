@@ -8,7 +8,7 @@ import { useContext } from 'react';
 import {type User} from "../types/User.js";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
-const apiURL = import.meta.env.VITE_SERVER_BASE_URL;
+import { serverBaseUrl as apiURL } from '../config/server.js';
 
 function Home() {
     const context = useContext(AppContext);
