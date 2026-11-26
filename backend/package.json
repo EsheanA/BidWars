@@ -23,11 +23,12 @@
   "main": "server.js",
   "scripts": {
     "dev": "tsx watch server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
   },
   "author": "",
   "license": "ISC",
