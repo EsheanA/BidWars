@@ -1,0 +1,115 @@
+{
+  "description": "Initial local two-player comparison, 2026-11-23 UTC. Relevant records extracted from original local logs; not a load test.",
+  "metric": "Server round timer expiry to next-item emission; excludes browser receipt and rendering.",
+  "baselineSource": "bidwars-timing.log",
+  "prefetchSource": "bidwars-prefetch-timing.log",
+  "baseline": [
+    {
+      "timestamp": "2026-11-23T03:05:26.023Z",
+      "level": "info",
+      "event": "round.transition.completed",
+      "roomId": "a109a6ac-7429-4fa4-997e-69e1295d24e6",
+      "transitionId": "f245f011-22c5-4e6c-a200-95ef8cdd786d",
+      "completedRound": 1,
+      "nextRound": 2,
+      "status": "success",
+      "hadWinner": true,
+      "durationMs": 30933,
+      "breakdown": {
+        "settlementMs": 493.55,
+        "itemGenerationMs": 28636.48,
+        "audioGenerationMs": 1366.98,
+        "otherMs": 436
+      }
+    },
+    {
+      "timestamp": "2026-11-23T03:06:04.307Z",
+      "level": "info",
+      "event": "round.transition.completed",
+      "roomId": "a109a6ac-7429-4fa4-997e-69e1295d24e6",
+      "transitionId": "b0a77dd6-ef41-40de-b46c-49124ddf7a56",
+      "completedRound": 2,
+      "nextRound": 3,
+      "status": "success",
+      "hadWinner": true,
+      "durationMs": 18280.75,
+      "breakdown": {
+        "settlementMs": 499.4,
+        "itemGenerationMs": 16075.47,
+        "audioGenerationMs": 1267.45,
+        "otherMs": 438.43
+      }
+    }
+  ],
+  "prefetch": [
+    {
+      "timestamp": "2026-11-23T03:54:06.339Z",
+      "level": "info",
+      "event": "item.preparation.boundary",
+      "roomId": "86cc05c2-a0f9-4823-988d-d03f18119528",
+      "gameId": "f773505d-6ff8-40e9-8bba-b77b108de6aa",
+      "round": 2,
+      "transitionId": "d390c7ea-55cc-4f2b-a4c1-6cbaf027186c",
+      "ready": true
+    },
+    {
+      "timestamp": "2026-11-23T03:54:07.241Z",
+      "level": "info",
+      "event": "round.transition.completed",
+      "roomId": "86cc05c2-a0f9-4823-988d-d03f18119528",
+      "gameId": "f773505d-6ff8-40e9-8bba-b77b108de6aa",
+      "round": 2,
+      "transitionId": "d390c7ea-55cc-4f2b-a4c1-6cbaf027186c",
+      "completedRound": 1,
+      "nextRound": 2,
+      "status": "success",
+      "hadWinner": true,
+      "durationMs": 901.4249580000032,
+      "breakdown": {
+        "settlementMs": 402.64274999999907,
+        "preparationWaitMs": 0.5522500000079162,
+        "activationMs": 171.80783400000655,
+        "presenceRefreshMs": 319.13904199999524,
+        "otherMs": 7.283081999994465
+      }
+    },
+    {
+      "timestamp": "2026-11-23T03:54:27.243Z",
+      "level": "info",
+      "event": "item.preparation.boundary",
+      "roomId": "86cc05c2-a0f9-4823-988d-d03f18119528",
+      "gameId": "f773505d-6ff8-40e9-8bba-b77b108de6aa",
+      "round": 3,
+      "transitionId": "ad1f5dfa-58a1-4dbc-a8ef-c32daf912017",
+      "ready": true
+    },
+    {
+      "timestamp": "2026-11-23T03:54:28.271Z",
+      "level": "info",
+      "event": "round.transition.completed",
+      "roomId": "86cc05c2-a0f9-4823-988d-d03f18119528",
+      "gameId": "f773505d-6ff8-40e9-8bba-b77b108de6aa",
+      "round": 3,
+      "transitionId": "ad1f5dfa-58a1-4dbc-a8ef-c32daf912017",
+      "completedRound": 2,
+      "nextRound": 3,
+      "status": "success",
+      "hadWinner": true,
+      "durationMs": 1027.7732909999904,
+      "breakdown": {
+        "settlementMs": 591.8904999999941,
+        "preparationWaitMs": 0.0983330000017304,
+        "activationMs": 132.57216600001266,
+        "presenceRefreshMs": 300.8129170000029,
+        "otherMs": 2.3993749999790452
+      }
+    }
+  ],
+  "summary": {
+    "baselineTransitions": 2,
+    "prefetchTransitions": 2,
+    "baselineMeanMs": 24606.875,
+    "prefetchMeanMs": 964.5991244999968,
+    "meanReductionPercent": 96.07996088694726
+  }
+}
