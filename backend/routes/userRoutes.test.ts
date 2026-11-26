@@ -14,6 +14,7 @@ describe('user route behavior with isolated persistence', () => {
         expect(result.statusCode).toBe(201);
         expect(result.body).toEqual({ message: 'New User Created' });
         expect(save.mock.instances[0]).toMatchObject({ username: 'Alice', passwordHash: 'hashed-password', balance: 500 });
+        expect(console.log).not.toHaveBeenCalled();
     });
     it('should reject an existing username', async () => {
         vi.spyOn(User, 'findOne').mockResolvedValue(new User({ username: 'Alice' }));
@@ -22,14 +23,22 @@ describe('user route behavior with isolated persistence', () => {
         expect(result.statusCode).toBe(409);
         expect(save).not.toHaveBeenCalled();
     });
-    it('should successfully login an existing user', async () => {
+    it.each(['development', 'production'])('should successfully log in and issue a secure cross-site cookie in %s', async (environment) => {
+        vi.stubEnv('NODE_ENV', environment);
         const user = new User({ username: 'Alice', passwordHash: 'hashed', balance: 500 });
         vi.spyOn(User, 'findOne').mockResolvedValue(user);
         vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
         const result = await invoke(router, '/login', 'post', { username: 'Alice', password: 'pass1234' });
         expect(result.statusCode).toBe(200);
         expect(result.body).toEqual({ userid: user._id.toString(), username: 'Alice', balance: 500 });
-        expect(result.cookie).toHaveBeenCalledWith(`token_${user._id}`, expect.any(String), expect.objectContaining({ httpOnly: true }));
+        expect(result.cookie).toHaveBeenCalledWith(`token_${user._id}`, expect.any(String), {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        expect(console.log).not.toHaveBeenCalled();
     });
     it('should accept a nonempty password longer than eight characters at signup', async () => {
         vi.spyOn(User, 'findOne').mockResolvedValue(null);
@@ -73,9 +82,16 @@ describe('account and inventory access', () => {
         expect(response.statusCode).toBe(401);
         expect(lookup).not.toHaveBeenCalled();
     });
-    it('clears the player cookie on logout', async () => {
+    it.each(['development', 'production'])('clears the player cookie with the login attributes in %s', async (environment) => {
+        vi.stubEnv('NODE_ENV', environment);
         const response = await invoke(router, '/logout', 'post', { userid: accountId });
-        expect(response.clearCookie).toHaveBeenCalledWith(`token_${accountId}`, expect.objectContaining({ httpOnly: true }));
+        expect(response.statusCode).toBe(200);
+        expect(response.clearCookie).toHaveBeenCalledExactlyOnceWith(`token_${accountId}`, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/',
+        });
         expect(response.body).toEqual({ message: 'Logged out successfully' });
     });
 });

@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction} from "express";
+import express, { Request, Response, NextFunction, type CookieOptions } from "express";
 import bcrypt from "bcrypt";
 import { verifyAccessToken } from "../tokenHandling/verifyToken";
 import crypto from "crypto";
@@ -9,8 +9,15 @@ import Item from "../models/Item";
 import { generateAccessToken } from "../tokenHandling/generateToken";
 const router = express.Router();
 
+// Login and logout must use the same attributes for credentialed cross-site requests.
+const accessCookieOptions: CookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    path: "/"
+};
+
 export const validate = (req: Request, res: Response, next: NextFunction): void => {
-        console.log("BODY:", req.body);
         const { username, password } = req.body as {
             username: unknown;
             password: unknown;
@@ -99,9 +106,7 @@ router.post("/login", validate, async (req: Request, res: Response): Promise<voi
         const accessToken: string = generateAccessToken(user);
 
         res.cookie(`token_${user._id}`, accessToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
+            ...accessCookieOptions,
             maxAge: 7 * 24 * 60 * 60 * 1000
         }).json({
             userid: user._id.toString(),
@@ -123,11 +128,7 @@ router.post("/logout", async (req: Request, res: Response): Promise<void> => {
             userid: string;
         };
 
-        res.clearCookie(`token_${userid}`, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict"
-        });
+        res.clearCookie(`token_${userid}`, accessCookieOptions);
 
         res.json({
             message: "Logged out successfully"
