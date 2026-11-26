@@ -4,6 +4,8 @@ import { createCorsOptions } from "./config/cors";
 import { verifyAccessToken } from "./tokenHandling/verifyToken";
 import cookieParser from "cookie-parser";
 import path from "path";
+import { assetPaths } from "./config/assets";
+import { getAudioStore } from "./storage/audioStore";
 
 import userRouter from "./routes/userRoutes";
 import auctionRouter from "./routes/auctionRoutes";
@@ -13,31 +15,20 @@ const app = express();
 export const corsOpts = createCorsOptions();
 app.use(cors(corsOpts));
 
-const ONE_DAY = 24 * 60 * 60 * 1000;
-
-app.use(
-    "/audioFiles",
-    express.static(path.join(__dirname, "audioFiles"), {
-        maxAge: ONE_DAY,
-        etag: true,
-        setHeaders(res) {
-            res.setHeader("Accept-Ranges", "bytes");
-            res.setHeader(
-                "Cache-Control",
-                "public, max-age=86400, immutable"
-            );
-        },
-    })
-);
+app.use('/audioFiles', express.static(getAudioStore().directory, {
+    maxAge: 24 * 60 * 60 * 1000,
+    etag: true,
+    setHeaders(res) { res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); }
+}));
 
 app.use(
     "/BidWarsSVGs",
-    express.static(path.join(__dirname, "BidWarsSVGs"))
+    express.static(path.join(assetPaths().staticRoot, "BidWarsSVGs"))
 );
 
 app.use(
     "/GoldSVGs",
-    express.static(path.join(__dirname, "GoldSVGs"))
+    express.static(path.join(assetPaths().staticRoot, "GoldSVGs"))
 );
 
 app.use(express.json());

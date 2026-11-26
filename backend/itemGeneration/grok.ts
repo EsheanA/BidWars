@@ -1,9 +1,7 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { createWriteStream } from "fs";
-import { pipeline } from "stream/promises";
-import { unlink } from "node:fs/promises";
+import { getAudioStore, audioFilename } from "../storage/audioStore";
 import type { ItemDraft } from "../services/itemPreparation";
 import auctionData from "../auctions/auctionz.json";
 import { getAuction } from "../auctions/auctionIndex";
@@ -103,7 +101,7 @@ export async function generateDraft(auctionIndex: number, signal?: AbortSignal):
       return { item: schema, category, rarity, img_url: `${category}.svg` };
 }
 
-// pipeline handles source errors as well as destination errors; never publish a partial file.
+// Storage publishes audio only after the stream finishes, and cleans up failed writes.
 export async function generateAudio(draft: ItemDraft, signal?: AbortSignal): Promise<string> {
       signal?.throwIfAborted();
       const requestSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000);
@@ -127,27 +125,13 @@ export async function generateAudio(draft: ItemDraft, signal?: AbortSignal): Pro
       }
       requestSignal.throwIfAborted();
       const filename = draft.item.item_name.replace(/[^a-zA-Z0-9_-]/g, "_");
-      const path = `audioFiles/${filename}_${uuidv4()}.mp3`;
-      const audio = Readable.fromWeb(responseTTS.body as NodeReadableStream<Uint8Array>);
-      const fileStream = createWriteStream(path, { flags: "wx" });
-      try {
-        await pipeline(audio, fileStream, { signal: requestSignal });
-        requestSignal.throwIfAborted();
-        return path;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') await discardAudio(path);
-        throw error;
-      }
+      const name = `${filename}_${uuidv4()}.mp3`;
+      await getAudioStore().save(name, Readable.fromWeb(responseTTS.body as NodeReadableStream<Uint8Array>), requestSignal);
+      return `audioFiles/${name}`;
 }
 
 export async function discardAudio(path: string): Promise<void> {
-    // Only files allocated by this module can be discarded.
-    if (!/^audioFiles\/[a-zA-Z0-9_-]+\.mp3$/.test(path)) throw new Error("Invalid prepared audio path");
-    try {
-        await unlink(path);
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    await getAudioStore().remove(audioFilename(path));
 }
 
 async function callGrok(auctionIndex: number, signal?: AbortSignal): Promise<string> {

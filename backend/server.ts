@@ -6,6 +6,7 @@ import type { Server as SocketServer } from 'socket.io';
 import app, { corsOpts } from './app';
 import { initSocket, closeSocket } from './socket/index';
 import redisRoomHandler from './RedisRooms/RoomHandler';
+import { getAudioStore } from './storage/audioStore';
 
 const server = http.createServer(app);
 let io: SocketServer | undefined;
@@ -26,6 +27,8 @@ async function startServer(): Promise<void> {
     const mongoURI = process.env.MONGODB_URI;
     if (!mongoURI?.trim()) throw new Error('MONGODB_URI is undefined');
 
+    await getAudioStore().initialize();
+    if (stopping) return;
     await mongoose.connect(mongoURI);
     if (stopping) return;
     console.log('Connected to MongoDB Atlas');

@@ -4,13 +4,14 @@ import { deferred } from './test-support/fixtures';
 
 const deps = vi.hoisted(() => ({
     listen: vi.fn(), close: vi.fn(), connect: vi.fn(), disconnect: vi.fn(),
-    init: vi.fn(), closeSocket: vi.fn(), closeRedis: vi.fn(), app: vi.fn(), cors: { credentials: true }
+    init: vi.fn(), closeSocket: vi.fn(), closeRedis: vi.fn(), initAudio: vi.fn(), app: vi.fn(), cors: { credentials: true }
 }));
 vi.mock('http', () => ({ default: { createServer: vi.fn() } }));
 vi.mock('mongoose', () => ({ default: { connect: deps.connect, disconnect: deps.disconnect } }));
 vi.mock('./socket/index', () => ({ initSocket: deps.init, closeSocket: deps.closeSocket }));
 vi.mock('./RedisRooms/RoomHandler', () => ({ default: { closeClient: deps.closeRedis } }));
 vi.mock('./app', () => ({ default: deps.app, corsOpts: deps.cors }));
+vi.mock('./storage/audioStore', () => ({ getAudioStore: () => ({ initialize: deps.initAudio }) }));
 import http from 'http';
 
 let server: EventEmitter & { listening: boolean; listen: typeof deps.listen; close: typeof deps.close };
@@ -35,6 +36,7 @@ beforeEach(() => {
     deps.listen.mockImplementation((_port, _host, callback) => { server.listening = true; callback(); return server; });
     deps.close.mockImplementation(callback => { server.listening = false; callback(); });
     deps.connect.mockResolvedValue({});
+    deps.initAudio.mockResolvedValue(undefined);
     deps.init.mockResolvedValue(io);
     deps.closeSocket.mockResolvedValue(undefined);
     deps.closeRedis.mockResolvedValue(undefined);
@@ -60,6 +62,7 @@ describe('server startup', () => {
         expect(deps.listen).toHaveBeenCalledWith(port ? 8080 : 3000, '0.0.0.0', expect.any(Function));
         expect(deps.init).toHaveBeenCalledExactlyOnceWith(server, deps.cors);
         expect(deps.connect).toHaveBeenCalledExactlyOnceWith('unit-test-only');
+        expect(deps.initAudio.mock.invocationCallOrder[0]).toBeLessThan(deps.connect.mock.invocationCallOrder[0]!);
         expect(deps.connect.mock.invocationCallOrder[0]).toBeLessThan(deps.init.mock.invocationCallOrder[0]!);
         expect(deps.init.mock.invocationCallOrder[0]).toBeLessThan(deps.listen.mock.invocationCallOrder[0]!);
     });
@@ -96,13 +99,15 @@ describe('server startup', () => {
         expect(process.exitCode).toBe(1);
     });
 
-    it.each(['MongoDB', 'Redis', 'listener'])('fails startup and cleans up after a %s failure', async failure => {
+    it.each(['audio storage', 'MongoDB', 'Redis', 'listener'])('fails startup and cleans up after a %s failure', async failure => {
         const error = new Error('offline');
+        if (failure === 'audio storage') deps.initAudio.mockRejectedValueOnce(error);
         if (failure === 'MongoDB') deps.connect.mockRejectedValueOnce(error);
         if (failure === 'Redis') deps.init.mockRejectedValueOnce(error);
         if (failure === 'listener') deps.listen.mockImplementationOnce(() => server.emit('error', error));
         await start();
         expect(process.exitCode).toBe(1);
+        if (failure === 'audio storage') expect(deps.connect).not.toHaveBeenCalled();
         expect(deps.listen).toHaveBeenCalledTimes(failure === 'listener' ? 1 : 0);
         expect(deps.closeSocket).toHaveBeenCalledTimes(failure === 'listener' ? 1 : 0);
         expect(deps.closeRedis).toHaveBeenCalled();
@@ -132,9 +137,9 @@ describe('server shutdown', () => {
         expect(vi.getTimerCount()).toBe(0);
     });
 
-    it.each(['MongoDB', 'Redis'])('never opens a listener when shutdown interrupts %s startup', async stage => {
+    it.each(['audio storage', 'MongoDB', 'Redis'])('never opens a listener when shutdown interrupts %s startup', async stage => {
         const connection = deferred<any>();
-        (stage === 'MongoDB' ? deps.connect : deps.init).mockReturnValueOnce(connection.promise);
+        (stage === 'audio storage' ? deps.initAudio : stage === 'MongoDB' ? deps.connect : deps.init).mockReturnValueOnce(connection.promise);
         await start();
         signals.get('SIGTERM')!();
         await flush();
