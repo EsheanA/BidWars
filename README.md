@@ -127,6 +127,60 @@ npx --no-install playwright test tests/serverUrls.spec.ts --workers=1
 
 These tests use no browsers, development servers or external services.
 
+### Static assets and audio storage
+
+`npm run build --prefix backend` compiles TypeScript and copies `BidWarsSVGs/` and
+`GoldSVGs/` into `backend/dist/`. Generated audio is not copied into the build.
+Use `npm run typecheck --prefix backend` for TypeScript checks without generating
+output; appending `--noEmit` to the build command is no longer the check command.
+
+Audio generation, cleanup and `/audioFiles/...` responses share one absolute
+storage directory. In development, the default is `backend/audioFiles/` for both
+source and compiled execution, regardless of the shell's working directory.
+Override it with `AUDIO_DIRECTORY` (relative paths resolve against `backend/`).
+The directory is created automatically in local mode. Existing local clips are
+preserved. Production requires an explicit storage choice:
+
+| Setting | Local development | Cloud Run with a bucket mount |
+| --- | --- | --- |
+| `AUDIO_STORAGE` | `local` (development default) | `mounted` |
+| `AUDIO_DIRECTORY` | Optional; defaults to `backend/audioFiles/` | Absolute mount path, e.g. `/mnt/bidwars-audio` |
+
+Bucket access uses Cloud Run's native Cloud Storage volume mount; no Google Node
+client package or application credential file is required. Create a private bucket
+and give the Cloud Run service identity `roles/storage.objectUser` on that bucket.
+Attach a writable Cloud Storage volume at the configured path. For an existing
+Cloud Run service, the deployment configuration would include:
+
+```bash
+gcloud run services update YOUR_SERVICE \
+  --add-volume="mount-path=/mnt/bidwars-audio,type=cloud-storage,bucket=YOUR_BUCKET,readonly=false" \
+  --update-env-vars="AUDIO_STORAGE=mounted,AUDIO_DIRECTORY=/mnt/bidwars-audio"
+```
+
+These are configuration instructions; no bucket or deployed service is created by
+this code. In mounted mode the directory must already exist and be readable and
+writable. A missing or inaccessible mount fails startup rather than creating a
+local fallback directory. The app does not independently authenticate or verify
+which bucket is mounted; Cloud Run's volume configuration establishes that mapping.
+Files are stored at the bucket root using unique MP3 names. Existing locally stored
+clips are not automatically migrated into the bucket.
+
+The backend serves the mounted files through the same `/audioFiles/...` paths,
+including browser caching (`max-age=86400, immutable`), ETags, HEAD and byte-range
+requests. The bucket itself can stay private; these application audio URLs retain
+their existing public-read behavior. Audio is ready only after its output stream
+closes. Partial files and unused preparation are deleted from the same directory.
+
+Cloud Storage FUSE does not provide distributed file locking; unique generated
+names avoid intentionally overwriting another writer's clip. Mount operations add
+network latency and memory overhead, so deployment needs an actual bucket smoke
+test and appropriate resource settings. See [Google's volume-mount guidance](https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts).
+
+Completed-round audio still follows the existing retention behavior: it is kept.
+This change adds no automatic expiry and deletes no existing recordings. Choose a
+bucket lifecycle/soft-delete policy separately if those clips should expire.
+
 ### Preparing the next auction item
 
 Each game prepares one future item while the current item is open for its usual
