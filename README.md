@@ -13,6 +13,10 @@ room events, and prepares narrated items while players bid.
 
 **TypeScript · React · Node.js · Express · Socket.IO · Redis · MongoDB · Grok · Lemonfox TTS**
 
+**Measured locally:** next-item preparation during bidding reduced the mean
+server-side gap between rounds from **24.61 s to 0.96 s (~96%)**, across two
+transitions per version. [Results and scope](#measured-round-transition-improvement).
+
 [Interface & demo](#interface--demo) · [Architecture](#architecture) ·
 [Engineering decisions](#engineering-decisions) · [Run locally](#running-locally) ·
 [Verification](#verification) · [Operations](#operations-reference)
@@ -218,6 +222,31 @@ end-to-end correctness test. The [Docker guide](backend/DOCKER.md) also provides
 an isolated MongoDB/Redis smoke harness for startup, static assets, audio ranges,
 CORS, and shutdown without provider calls.
 
+### Measured round-transition improvement
+
+Preparing the next item during bidding reduced the average server-side transition
+gap from **24.61 seconds to 0.96 seconds (about 96%)** in an initial local
+two-player comparison. The measurement runs from the server round timer expiring
+to the server emitting the next item; it excludes browser receipt and rendering.
+
+| Transition | Before preparation overlap | With preparation overlap |
+| --- | ---: | ---: |
+| Round 1 → 2 | 30.93 s | 0.90 s |
+| Round 2 → 3 | 18.28 s | 1.03 s |
+| **Mean** | **24.61 s** | **0.96 s** |
+
+The baseline logs show item generation taking 16–29 seconds, compared with about
+0.5 seconds for settlement. Moving draft and speech preparation into the current
+20-second round removed that provider work from the transition path when ready.
+Both prefetched items were ready when bidding closed in this measured run.
+
+This comparison contains **two transitions per version**, recorded on November 23,
+2026 (UTC). It demonstrates an observed local improvement, not a production
+latency guarantee or a capacity result. Provider variability, late preparation,
+and a larger sample still need measurement. The
+[extracted timing records and calculated summary](docs/performance/round-transition-sample.json)
+are included so the numbers can be checked.
+
 ### Timing instrumentation
 
 The backend records preparation attempts and round-transition durations, including
@@ -227,9 +256,9 @@ next-item receipt using the same context. See
 [roundTiming.ts](backend/logging/roundTiming.ts) and
 [BattleRoom.tsx](frontend/src/pages/BattleRoom.tsx).
 
-These are measurement hooks. No checked-in load-test results establish bid
-latency, throughput, concurrency capacity, or a measured speedup from preparation
-overlap, so this README makes no numerical performance claims.
+The local comparison above measures round-transition delay. Bid-confirmation
+latency, throughput, concurrent-room capacity, and deployed p50/p95 transition
+latency have not been established by checked-in load-test results.
 
 ## Operations reference
 
