@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/images/logo.png" alt="BidWars" width="200" />
+  <img src="frontend/public/images/logo3.png" alt="BidWars" width="200" />
 </p>
 
 # BidWars
