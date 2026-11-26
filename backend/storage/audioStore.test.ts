@@ -85,7 +85,7 @@ describe('audio storage', () => {
         vi.stubEnv('AUDIO_DIRECTORY', '/mnt/bidwars-audio');
         const store = createAudioStore();
         await store.initialize();
-        expect(store.directory).toBe('/mnt/bidwars-audio');
+        expect(store).toMatchObject({ directory: '/mnt/bidwars-audio' });
         expect(deps.stat).toHaveBeenCalledWith('/mnt/bidwars-audio');
         expect(deps.access).toHaveBeenCalled();
         expect(deps.mkdir).not.toHaveBeenCalled();

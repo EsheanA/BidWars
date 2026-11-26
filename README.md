@@ -74,7 +74,7 @@ npm run dev
 
 The backend has an Ubuntu 24.04 / Node 24 container setup; the frontend remains on
 Vercel. See [backend/DOCKER.md](backend/DOCKER.md) for image builds, disposable local
-MongoDB/Redis smoke checks, Cloud Run bucket-mount permissions, and Vercel settings.
+MongoDB/Redis smoke checks, Cloud Storage permissions, and Vercel settings.
 Use `backend/` as the Docker build context. Container builds exclude tests and
 local data using the production TypeScript config and Docker context allowlist.
 
@@ -142,52 +142,28 @@ These tests use no browsers, development servers or external services.
 Use `npm run typecheck --prefix backend` for TypeScript checks without generating
 output; appending `--noEmit` to the build command is no longer the check command.
 
-Audio generation, cleanup and `/audioFiles/...` responses share one absolute
-storage directory. In development, the default is `backend/audioFiles/` for both
-source and compiled execution, regardless of the shell's working directory.
-Override it with `AUDIO_DIRECTORY` (relative paths resolve against `backend/`).
-The directory is created automatically in local mode. Existing local clips are
-preserved. Production requires an explicit storage choice:
+Production requires an explicit audio storage mode. Local development defaults to
+`local` and creates `backend/audioFiles/` automatically. Relative `AUDIO_DIRECTORY`
+paths resolve against `backend/` in both source and compiled execution.
 
-| Setting | Local development | Cloud Run with a bucket mount |
-| --- | --- | --- |
-| `AUDIO_STORAGE` | `local` (development default) | `mounted` |
-| `AUDIO_DIRECTORY` | Optional; defaults to `backend/audioFiles/` | Absolute mount path, e.g. `/mnt/bidwars-audio` |
+| Mode | Configuration |
+| --- | --- |
+| `local` | Optional `AUDIO_DIRECTORY`, defaults to `backend/audioFiles/`. |
+| `gcs` | Set `AUDIO_BUCKET` to a private bucket name. Cloud Run uses its attached service account to access the Cloud Storage API. |
+| `mounted` | Set `AUDIO_DIRECTORY` to an existing, writable absolute mount path. |
 
-Bucket access uses Cloud Run's native Cloud Storage volume mount; no Google Node
-client package or application credential file is required. Create a private bucket
-and give the Cloud Run service identity `roles/storage.objectUser` on that bucket.
-Attach a writable Cloud Storage volume at the configured path. For an existing
-Cloud Run service, the deployment configuration would include:
+For direct bucket access, grant the Cloud Run service account **Storage Object User**
+(`roles/storage.objectUser`) on the audio bucket. The server checks that it can
+list objects before it starts accepting traffic. See [the deployment guide](backend/DOCKER.md)
+for the Cloud Run settings and checks.
 
-```bash
-gcloud run services update YOUR_SERVICE \
-  --add-volume="mount-path=/mnt/bidwars-audio,type=cloud-storage,bucket=YOUR_BUCKET,readonly=false" \
-  --update-env-vars="AUDIO_STORAGE=mounted,AUDIO_DIRECTORY=/mnt/bidwars-audio"
-```
-
-These are configuration instructions; no bucket or deployed service is created by
-this code. In mounted mode the directory must already exist and be readable and
-writable. A missing or inaccessible mount fails startup rather than creating a
-local fallback directory. The app does not independently authenticate or verify
-which bucket is mounted; Cloud Run's volume configuration establishes that mapping.
-Files are stored at the bucket root using unique MP3 names. Existing locally stored
-clips are not automatically migrated into the bucket.
-
-The backend serves the mounted files through the same `/audioFiles/...` paths,
-including browser caching (`max-age=86400, immutable`), ETags, HEAD and byte-range
-requests. The bucket itself can stay private; these application audio URLs retain
-their existing public-read behavior. Audio is ready only after its output stream
-closes. Partial files and unused preparation are deleted from the same directory.
-
-Cloud Storage FUSE does not provide distributed file locking; unique generated
-names avoid intentionally overwriting another writer's clip. Mount operations add
-network latency and memory overhead, so deployment needs an actual bucket smoke
-test and appropriate resource settings. See [Google's volume-mount guidance](https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts).
-
-Completed-round audio still follows the existing retention behavior: it is kept.
-This change adds no automatic expiry and deletes no existing recordings. Choose a
-bucket lifecycle/soft-delete policy separately if those clips should expire.
+All modes use the same `/audioFiles/...` playback URLs and retain browser caching,
+ETags, HEAD and single byte ranges. The private bucket stays behind the backend.
+In `gcs` mode, audio is ready after its object upload succeeds. The backend uses
+unique MP3 names at the bucket root and rejects writes that would overwrite an
+existing object. Unused prepared clips are removed through the same storage mode.
+Completed-round audio is retained. Configure a bucket lifecycle policy separately
+if those clips should expire. Existing local clips stay in their original directory.
 
 ### Preparing the next auction item
 

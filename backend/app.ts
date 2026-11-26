@@ -5,7 +5,8 @@ import { verifyAccessToken } from "./tokenHandling/verifyToken";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { assetPaths } from "./config/assets";
-import { getAudioStore } from "./storage/audioStore";
+import { FileAudioStore, getAudioStore } from "./storage/audioStore";
+import { serveCloudAudio } from "./storage/cloudAudioMiddleware";
 
 import userRouter from "./routes/userRoutes";
 import auctionRouter from "./routes/auctionRoutes";
@@ -15,11 +16,12 @@ const app = express();
 export const corsOpts = createCorsOptions();
 app.use(cors(corsOpts));
 
-app.use('/audioFiles', express.static(getAudioStore().directory, {
+const audioStore = getAudioStore();
+app.use('/audioFiles', audioStore instanceof FileAudioStore ? express.static(audioStore.directory, {
     maxAge: 24 * 60 * 60 * 1000,
     etag: true,
     setHeaders(res) { res.setHeader('Cache-Control', 'public, max-age=86400, immutable'); }
-}));
+}) : serveCloudAudio(audioStore));
 
 app.use(
     "/BidWarsSVGs",

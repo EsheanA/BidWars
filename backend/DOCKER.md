@@ -149,21 +149,34 @@ Use the linux/amd64 image and set these on the service, not during image build:
 | `REDIS_URL` | Your reachable Redis connection string, supplied as a secret |
 | `ACCESS_TOKEN_SECRET` | Stable signing secret supplied as a secret |
 | `GROK_KEY`, `LEMON_FOX_KEY` | Provider secrets, supplied only at runtime |
-| `AUDIO_STORAGE` | `mounted` |
-| `AUDIO_DIRECTORY` | Absolute bucket mount path, e.g. `/mnt/bidwars-audio` |
+| `AUDIO_STORAGE` | `gcs` |
+| `AUDIO_BUCKET` | Private bucket name, e.g. `YOUR_PROJECT_ID-audio` |
 
 The browser must be able to reach the service without supplying a Google IAM ID
 token; this frontend authenticates using the application's JWT cookies. Configure
 the service's invocation/access policy accordingly at deployment while retaining
 application authentication. This setup makes no IAM or public-access changes.
 
-Configure a **writable Cloud Storage bucket volume** at that exact path, with mount
-options `uid=10001;gid=10001`. Keep the bucket private and grant the service identity
-the required bucket-level object permissions. The container must not pre-create the
-mount path as a substitute for an actual mount. Cloud Run provisions and authenticates
-the mount; the app checks the directory and operating-system read/write permissions.
-An actual bucket upload/read/delete smoke test remains necessary at deployment.
-No bucket, IAM policy or service is created by the Docker setup.
+For `gcs` mode, enter the bucket name without `gs://` and leave **Volumes** empty.
+Select the `bidwars-backend` service account and grant it **Storage Object User**
+(`roles/storage.objectUser`) on the private audio bucket. The backend uses short-lived
+access tokens from Cloud Run and checks bucket listing before it starts the server.
+The bucket name is an ordinary environment variable. Authentication comes from the
+attached service account.
+
+Audio uploads go directly to Cloud Storage and buffer at most 8 MiB of clip data
+per preparation. Playback streams through the existing backend URL. Verify that a
+deployed auction writes an MP3 object, plays it, and returns `206 Partial Content`
+for a request with `Range: bytes=0-9`. Check that an abandoned preparation's unused
+clip is removed. Startup listing checks bucket access, while these steps exercise
+write, read, and delete permissions. After a failed or cancelled upload, the backend
+attempts to remove its own object. If a network failure prevents confirmation and
+cleanup, a completed but unused object can remain in the bucket.
+
+For an existing deployment that uses a mounted directory, `AUDIO_STORAGE=mounted`
+remains supported. Set `AUDIO_DIRECTORY` to the absolute path of a writable Cloud
+Storage volume mounted with `uid=10001;gid=10001`. The backend fails startup if
+that directory is missing or inaccessible.
 
 Use Cloud Run's TCP startup probe on the configured port, or explicitly design a
 separate health endpoint later. Do not configure an unauthenticated HTTP probe to
@@ -179,9 +192,8 @@ and restart recovery require additional application work.
 WebSocket connections have Cloud Run request timeouts: the default is five minutes,
 with a maximum of 60 minutes. Configure a suitable timeout and account for reconnects.
 The frontend currently navigates home on disconnect, so a timeout/redeployment can
-interrupt play. Open WebSockets keep an instance active and billable. Bucket mounts
-also add memory and network overhead; choose resource settings after a real deployment
-measurement. No gameplay or bucket latency claim follows from these local checks.
+interrupt play. Open WebSockets keep an instance active and billable. Measure
+memory use and round timings on a deployed instance with the real audio bucket.
 
 ## Frontend stays on Vercel
 
@@ -218,6 +230,7 @@ frontend and backend; do not weaken the cookie settings or broaden CORS.
 - [Node LTS schedule](https://nodejs.org/en/about/previous-releases)
 - [Official Node downloads/checksums](https://nodejs.org/dist/v24.22.3/)
 - [Cloud Run container contract](https://docs.cloud.google.com/run/docs/container-contract)
+- [Cloud Run service identity and access to Google APIs](https://docs.cloud.google.com/run/docs/securing/service-identity)
 - [Cloud Storage volume mounts and UID/GID options](https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts)
 - [Cloud Run WebSockets, timeout and affinity guidance](https://docs.cloud.google.com/run/docs/triggering/websockets)
 - [Credentialed CORS and third-party cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#requests_with_credentials)

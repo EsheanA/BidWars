@@ -4,19 +4,17 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { assetPaths } from '../config/assets';
+import { audioFilename } from './audioFilename';
+import { CloudAudioStore } from './cloudAudioStore';
+
+export { audioFilename } from './audioFilename';
 
 export interface AudioStore {
-    readonly directory: string;
     initialize(): Promise<void>;
     save(name: string, audio: Readable, signal: AbortSignal): Promise<void>;
     remove(name: string): Promise<void>;
 }
 
-export function audioFilename(value: string): string {
-    const match = /^(?:audioFiles\/)?([a-zA-Z0-9_-]+\.mp3)$/.exec(value);
-    if (!match) throw new Error('Invalid prepared audio path');
-    return match[1]!;
-}
 const code = (error: unknown) => (error as { code?: string | number })?.code;
 
 export class FileAudioStore implements AudioStore {
@@ -53,14 +51,15 @@ export class FileAudioStore implements AudioStore {
     }
 }
 
-export function createAudioStore(): AudioStore {
+export function createAudioStore(): FileAudioStore | CloudAudioStore {
     const mode = process.env.AUDIO_STORAGE ?? (process.env.NODE_ENV === 'production' ? '' : 'local');
     if (mode === 'local') return new FileAudioStore(assetPaths().audioDirectory);
-    if (mode !== 'mounted') throw new Error('AUDIO_STORAGE must be local or mounted (required in production)');
+    if (mode === 'gcs') return new CloudAudioStore(process.env.AUDIO_BUCKET ?? '');
+    if (mode !== 'mounted') throw new Error('AUDIO_STORAGE must be local, mounted or gcs (required in production)');
     const directory = process.env.AUDIO_DIRECTORY;
     if (!directory || !path.isAbsolute(directory)) throw new Error('Mounted audio requires an absolute AUDIO_DIRECTORY');
     return new FileAudioStore(directory, true);
 }
 
-let configured: AudioStore | undefined;
-export function getAudioStore(): AudioStore { return configured ??= createAudioStore(); }
+let configured: ReturnType<typeof createAudioStore> | undefined;
+export function getAudioStore() { return configured ??= createAudioStore(); }
